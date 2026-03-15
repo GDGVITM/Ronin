@@ -1,0 +1,249 @@
+import { useEffect, useState, useRef, useCallback } from "react";
+import { http } from "../api/http";
+import { useAuthStore } from "../store/auth.store";
+import { getSocket } from "../socket/client";
+import type { QuizPushedQuestion, Matchup } from "../types";
+
+type AnswerAck = {
+  questionId: string;
+  isCorrect: boolean;
+  pointsEarned: number;
+  correctIndex: number;
+};
+
+type QuizState = "WAITING" | "ANSWERING" | "RESULT";
+
+type LeaderEntry = { userId: string; userName: string; totalQuizPoints: number; bits: number };
+
+export function Round2Page() {
+  const user = useAuthStore((s) => s.user);
+  const [state, setState] = useState<QuizState>("WAITING");
+  const [question, setQuestion] = useState<QuizPushedQuestion | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [answerResult, setAnswerResult] = useState<AnswerAck | null>(null);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
+  const [totalScore, setTotalScore] = useState(0);
+  const [questionCount, setQuestionCount] = useState(0);
+  const [matchup, setMatchup] = useState<Matchup | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(0);
+
+  const fetchLeaderboard = useCallback(async () => {
+    try {
+      const { data } = await http.get<LeaderEntry[]>("/quiz/leaderboard");
+      setLeaderboard(data);
+    } catch { /* */ }
+  }, []);
+
+  // Fetch matchup
+  useEffect(() => {
+    if (!user) return;
+    http.get<Matchup[]>("/round/2/matchups").then(({ data }) => {
+      const m = data.find((x) => x.user1.id === user.id || x.user2.id === user.id);
+      if (m) setMatchup(m);
+    }).catch(() => null);
+  }, [user]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.emit("room:join", "round2");
+
+    const handleQuestion = (q: QuizPushedQuestion) => {
+      setQuestion(q);
+      setSelectedIndex(null);
+      setAnswerResult(null);
+      setTimeLeft(q.timeLimit);
+      startTimeRef.current = Date.now();
+      setState("ANSWERING");
+      setQuestionCount((c) => c + 1);
+    };
+
+    const handleAck = (ack: AnswerAck) => {
+      setAnswerResult(ack);
+      setState("RESULT");
+      setTotalScore((s) => s + ack.pointsEarned);
+      if (timerRef.current) clearInterval(timerRef.current);
+      fetchLeaderboard();
+    };
+
+    socket.on("round2:question", handleQuestion);
+    socket.on("quiz:answer-ack", handleAck);
+    return () => {
+      socket.emit("room:leave", "round2");
+      socket.off("round2:question", handleQuestion);
+      socket.off("quiz:answer-ack", handleAck);
+    };
+  }, [fetchLeaderboard]);
+
+  useEffect(() => {
+    if (state !== "ANSWERING" || !question) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          setState("RESULT");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [state, question]);
+
+  async function handleAnswer(index: number) {
+    if (selectedIndex !== null || !question) return;
+    setSelectedIndex(index);
+    const responseTime = Date.now() - startTimeRef.current;
+    try {
+      await http.post("/quiz/answer", { questionId: question.id, selectedIndex: index, responseTime });
+    } catch { /* ack via socket */ }
+  }
+
+  const opponent = matchup
+    ? (matchup.user1.id === user?.id ? matchup.user2 : matchup.user1)
+    : null;
+  const timerPercent = question ? (timeLeft / question.timeLimit) * 100 : 0;
+
+  return (
+    <div className="flex h-[calc(100vh-49px)] flex-col text-white">
+      {/* Header */}
+      <div className="border-b border-gray-800 bg-ghost-panel px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg font-bold text-ghost-gold">Shrine Of Wisdom — Debug MCQ</h1>
+            {opponent && (
+              <>
+                <span className="text-sm text-gray-400">vs</span>
+                <span className="font-semibold text-ghost-red">{opponent.name}</span>
+              </>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-400">Question {questionCount}</p>
+            <p className="text-lg font-bold text-ghost-gold">{totalScore} pts</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main area */}
+        <div className="flex flex-1 flex-col overflow-y-auto p-6">
+          {state === "WAITING" && (
+            <div className="flex flex-1 items-center justify-center">
+              <div className="text-center">
+                <div className="mx-auto mb-6 h-16 w-16 animate-pulse rounded-full bg-ghost-gold/20" />
+                <h2 className="text-2xl font-bold text-gray-300">Waiting for next question...</h2>
+                <p className="mt-2 text-gray-500">The admin will push debugging questions in real-time.</p>
+              </div>
+            </div>
+          )}
+
+          {state === "ANSWERING" && question && (
+            <div className="mx-auto w-full max-w-3xl">
+              {/* Timer */}
+              <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-gray-800">
+                <div
+                  className={`h-full transition-all duration-1000 ${
+                    timerPercent > 50 ? "bg-ghost-green" : timerPercent > 20 ? "bg-ghost-gold" : "bg-ghost-red"
+                  }`}
+                  style={{ width: `${timerPercent}%` }}
+                />
+              </div>
+              <p className="mb-4 text-center text-sm text-gray-400">{timeLeft}s remaining</p>
+
+              {/* Code snippet */}
+              {question.codeSnippet && (
+                <div className="mb-6 rounded-lg bg-[#1e1e1e] p-4">
+                  <p className="mb-2 text-xs font-semibold text-gray-500">BUGGY CODE:</p>
+                  <pre className="overflow-x-auto whitespace-pre text-sm leading-relaxed text-gray-200">
+                    <code>{question.codeSnippet}</code>
+                  </pre>
+                </div>
+              )}
+
+              {/* Question */}
+              <h2 className="mb-6 text-lg font-semibold">{question.questionText}</h2>
+
+              {/* Options */}
+              <div className="grid gap-3">
+                {(question.options as string[]).map((option, i) => (
+                  <button
+                    key={i}
+                    className={`rounded-lg border-2 p-4 text-left text-sm font-medium transition-all ${
+                      selectedIndex === i
+                        ? "border-ghost-gold bg-ghost-gold/20 text-ghost-gold"
+                        : "border-gray-700 bg-ghost-panel hover:border-gray-500"
+                    } ${selectedIndex !== null ? "cursor-not-allowed" : "cursor-pointer"}`}
+                    onClick={() => handleAnswer(i)}
+                    disabled={selectedIndex !== null}
+                  >
+                    <span className="mr-3 font-bold text-gray-500">{String.fromCharCode(65 + i)}.</span>
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {state === "RESULT" && (
+            <div className="flex flex-1 items-center justify-center">
+              <div className="text-center">
+                {answerResult ? (
+                  <>
+                    <div className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full ${
+                      answerResult.isCorrect ? "bg-ghost-green/20 text-ghost-green" : "bg-ghost-red/20 text-ghost-red"
+                    }`}>
+                      <span className="text-3xl">{answerResult.isCorrect ? "+" : "X"}</span>
+                    </div>
+                    <h2 className="text-2xl font-bold">
+                      {answerResult.isCorrect
+                        ? <span className="text-ghost-green">Correct!</span>
+                        : <span className="text-ghost-red">Wrong!</span>}
+                    </h2>
+                    {answerResult.isCorrect && <p className="mt-2 text-ghost-gold">+{answerResult.pointsEarned} points</p>}
+                    {!answerResult.isCorrect && question && (
+                      <p className="mt-2 text-gray-400">
+                        Answer: {String.fromCharCode(65 + answerResult.correctIndex)}. {(question.options as string[])[answerResult.correctIndex]}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-bold text-ghost-red">Time's up!</h2>
+                    <p className="mt-2 text-gray-400">You didn't answer in time.</p>
+                  </>
+                )}
+                <p className="mt-6 text-gray-500">Waiting for next question...</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Leaderboard sidebar */}
+        <div className="w-64 border-l border-gray-800 bg-ghost-panel p-4">
+          <h3 className="text-sm font-semibold text-ghost-gold">Quiz Scores</h3>
+          <div className="mt-3 space-y-1">
+            {leaderboard.map((entry, i) => (
+              <div
+                key={entry.userId}
+                className={`flex items-center justify-between rounded px-3 py-1.5 text-sm ${
+                  entry.userId === user?.id ? "bg-ghost-gold/10" : "bg-black/20"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`font-bold ${i === 0 ? "text-ghost-gold" : "text-gray-500"}`}>#{i + 1}</span>
+                  <span className="truncate">{entry.userName}</span>
+                </div>
+                <span className="font-mono text-ghost-gold">{entry.totalQuizPoints}</span>
+              </div>
+            ))}
+            {leaderboard.length === 0 && <p className="text-xs text-gray-500">No scores yet.</p>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: way-of-ghost-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: way_of_ghost
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d way_of_ghost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: way-of-ghost-piston
+    restart: unless-stopped
+    ports:
+      - "2000:2000"
+    tmpfs:
+      - /piston/jobs:exec,uid=1000,gid=1000
+    privileged: true
+
+volumes:
+  postgres_data:

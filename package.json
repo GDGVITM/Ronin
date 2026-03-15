@@ -1,0 +1,22 @@
+{
+  "name": "gdg-spectrum",
+  "version": "1.0.0",
+  "description": "Way Of Ghost event platform",
+  "private": true,
+  "scripts": {
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "build:client": "npm run build --prefix client",
+    "build:server": "npm run build --prefix server",
+    "db:up": "docker-compose up -d",
+    "db:down": "docker-compose down",
+    "db:logs": "docker-compose logs -f postgres"
+  },
+  "keywords": [
+    "dsa",
+    "event",
+    "gdg"
+  ],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   adminStartRound,
+  adminResetRound,
   listPendingUsers,
   updateUserApproval,
 } from "../controllers/admin.controller.js";
@@ -12,3 +13,4 @@ adminRouter.use(requireAuth, requireAdmin);
 adminRouter.get("/pending-users", listPendingUsers);
 adminRouter.patch("/users/:userId", updateUserApproval);
 adminRouter.post("/start-round", adminStartRound);
+adminRouter.post("/reset-round", adminResetRound);

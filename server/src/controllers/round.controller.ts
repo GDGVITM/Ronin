@@ -16,7 +16,7 @@ export async function getRoundMatchups(req: Request, res: Response) {
       winner: { select: { id: true, name: true } },
       problem: { select: { id: true, title: true, difficulty: true, timeLimit: true } },
     },
-    orderBy: { startedAt: "asc" },
+    orderBy: { startedAt: "desc" },
   });
   return res.json(matchups);
 }

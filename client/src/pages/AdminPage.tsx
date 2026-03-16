@@ -74,6 +74,19 @@ export function AdminPage() {
       const { data } = await http.post("/admin/start-round", { roundNumber: n });
       flash(data.message);
       loadEventState();
+      loadMatchups(n);
+    } catch (err) {
+      flash((err as { response?: { data?: { message?: string } } }).response?.data?.message ?? "Failed");
+    }
+  }
+
+  async function resetRound(n: number) {
+    if (!confirm(`Reset Round ${n}? This will delete ALL matchups for this round and un-eliminate affected users.`)) return;
+    try {
+      const { data } = await http.post("/admin/reset-round", { roundNumber: n });
+      flash(data.message);
+      loadEventState();
+      setMatchups([]);
     } catch (err) {
       flash((err as { response?: { data?: { message?: string } } }).response?.data?.message ?? "Failed");
     }
@@ -151,13 +164,32 @@ export function AdminPage() {
               ) : <p className="mt-1 text-sm text-gray-500">No event state yet.</p>}
             </div>
             <div className="rounded bg-ghost-panel p-4">
-              <h2 className="text-lg font-semibold">Start Round</h2>
-              <div className="mt-3 flex gap-3">
-                {[1, 2, 3].map((n) => (
-                  <button key={n} className="rounded bg-ghost-gold px-4 py-2 font-semibold text-black" onClick={() => startRound(n)}>
-                    Start Round {n}
-                  </button>
-                ))}
+              <h2 className="text-lg font-semibold">Round Controls</h2>
+              <div className="mt-3 space-y-3">
+                {[1, 2, 3].map((n) => {
+                  const isLive = eventState?.currentRound === n && eventState?.roundStatus === "LIVE";
+                  return (
+                    <div key={n} className="flex items-center gap-3">
+                      <span className="w-20 text-sm font-medium text-gray-300">Round {n}</span>
+                      {isLive && (
+                        <span className="rounded bg-ghost-green/20 px-2 py-0.5 text-xs font-semibold text-ghost-green">LIVE</span>
+                      )}
+                      <button
+                        className="rounded bg-ghost-gold px-4 py-1.5 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={() => startRound(n)}
+                        disabled={isLive}
+                      >
+                        Start
+                      </button>
+                      <button
+                        className="rounded bg-ghost-red/80 px-4 py-1.5 text-sm font-semibold text-white hover:bg-ghost-red"
+                        onClick={() => resetRound(n)}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
             {/* Matchups */}

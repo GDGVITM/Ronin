@@ -26,39 +26,108 @@ export function Round1Page() {
   const [timeLeft, setTimeLeft] = useState(ROUND_DURATION);
   const [matchResult, setMatchResult] = useState<{ winnerId: string; loserId: string } | null>(null);
   const [opponentStatus, setOpponentStatus] = useState("");
+  const [runError, setRunError] = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchMatchup = useCallback(async () => {
     if (!user) return;
     try {
       const { data } = await http.get<Matchup[]>("/round/1/matchups");
-      const myMatch = data.find(
+
+      // Find the user's matchups, prefer LIVE over COMPLETED
+      const myMatches = data.filter(
         (m) => m.user1.id === user.id || m.user2.id === user.id
       );
+
+      // Prefer the latest LIVE matchup; fall back to the latest any-status matchup
+      const liveMatch = myMatches.find((m) => m.status === "LIVE");
+      const myMatch = liveMatch ?? myMatches[myMatches.length - 1] ?? null;
+
       if (myMatch) {
-        setMatchup(myMatch);
+        // Reset all state when matchup changes
+        setMatchup((prev) => {
+          if (prev?.id !== myMatch.id) {
+            setOutput(null);
+            setSubmissionResult(null);
+            setMatchResult(null);
+            setOpponentStatus("");
+            setRunError("");
+          }
+          return myMatch;
+        });
+
         const { data: problems } = await http.get<Problem[]>("/problem?round=1");
         const p = problems.find((pr) => pr.id === myMatch.problem.id);
         if (p) {
           setProblem(p);
           setCode(p.starterCode || "");
         }
-        if (myMatch.startedAt) {
+
+        // Calculate timer from latest matchup's startedAt
+        if (myMatch.startedAt && myMatch.status === "LIVE") {
           const elapsed = Math.floor(
             (Date.now() - new Date(myMatch.startedAt).getTime()) / 1000
           );
           setTimeLeft(Math.max(0, ROUND_DURATION - elapsed));
+        } else if (myMatch.status === "COMPLETED") {
+          setTimeLeft(0);
+          if (myMatch.winner) {
+            const loserId = myMatch.winner.id === myMatch.user1.id ? myMatch.user2.id : myMatch.user1.id;
+            setMatchResult({ winnerId: myMatch.winner.id, loserId });
+          }
         }
-        if (myMatch.status === "COMPLETED" && myMatch.winner) {
-          const loserId = myMatch.winner.id === myMatch.user1.id ? myMatch.user2.id : myMatch.user1.id;
-          setMatchResult({ winnerId: myMatch.winner.id, loserId });
-        }
+      } else {
+        // No matchup found — reset everything
+        setMatchup(null);
+        setProblem(null);
+        setCode("");
+        setOutput(null);
+        setSubmissionResult(null);
+        setMatchResult(null);
+        setOpponentStatus("");
+        setRunError("");
+        setTimeLeft(ROUND_DURATION);
       }
     } catch { /* no matchup yet */ }
   }, [user]);
 
+  // Initial fetch
   useEffect(() => { fetchMatchup(); }, [fetchMatchup]);
 
+  // Listen for round:started and round:reset to re-fetch matchup
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleRoundStarted = (data: { roundNumber: number }) => {
+      if (data.roundNumber === 1) fetchMatchup();
+    };
+    const handleRoundReset = (data: { roundNumber: number }) => {
+      if (data.roundNumber === 1) {
+        // Clear everything and re-fetch
+        if (timerRef.current) clearInterval(timerRef.current);
+        setMatchup(null);
+        setProblem(null);
+        setCode("");
+        setOutput(null);
+        setSubmissionResult(null);
+        setMatchResult(null);
+        setOpponentStatus("");
+        setRunError("");
+        setTimeLeft(ROUND_DURATION);
+        fetchMatchup();
+      }
+    };
+
+    socket.on("round:started", handleRoundStarted);
+    socket.on("round:reset", handleRoundReset);
+    return () => {
+      socket.off("round:started", handleRoundStarted);
+      socket.off("round:reset", handleRoundReset);
+    };
+  }, [fetchMatchup]);
+
+  // Timer — uses matchup.id as key so it resets when matchup changes
   useEffect(() => {
     if (!matchup || matchup.status !== "LIVE") return;
     timerRef.current = setInterval(() => {
@@ -71,8 +140,9 @@ export function Round1Page() {
       });
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [matchup]);
+  }, [matchup?.id, matchup?.status]);
 
+  // Socket: join matchup room for live updates
   useEffect(() => {
     const socket = getSocket();
     if (!socket || !matchup) return;
@@ -95,17 +165,19 @@ export function Round1Page() {
       socket.off("matchup:result", handleResult);
       socket.off("submission:result", handleSubResult);
     };
-  }, [matchup, user]);
+  }, [matchup?.id, user]);
 
   async function handleRun() {
     if (!problem) return;
     setLoading(true);
     setOutput(null);
+    setRunError("");
     try {
       const { data } = await http.post<RunResult>("/submission/run", { problemId: problem.id, language, code });
       setOutput(data);
-    } catch {
-      setOutput({ passedTests: 0, totalTests: 0, accepted: false });
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? "Execution failed";
+      setRunError(msg);
     }
     setLoading(false);
   }
@@ -114,13 +186,15 @@ export function Round1Page() {
     if (!problem || !matchup) return;
     setLoading(true);
     setSubmissionResult(null);
+    setRunError("");
     try {
       const { data } = await http.post<SubmissionResult>("/submission/submit", {
         problemId: problem.id, language, code, matchupId: matchup.id,
       });
       setSubmissionResult(data);
-    } catch {
-      setSubmissionResult({ accepted: false, passedTests: 0, totalTests: 0 });
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? "Submission failed";
+      setRunError(msg);
     }
     setLoading(false);
   }
@@ -258,7 +332,13 @@ export function Round1Page() {
                 <p className="text-xs text-gray-400">{submissionResult.passedTests}/{submissionResult.totalTests} tests passed</p>
               </div>
             )}
-            {!output && !submissionResult && <p className="mt-2 text-xs text-gray-500">Run your code to see results here.</p>}
+            {runError && (
+              <div className="mt-2 rounded border border-ghost-red/40 bg-ghost-red/10 p-3">
+                <p className="text-sm font-semibold text-ghost-red">Error</p>
+                <p className="mt-1 text-xs text-gray-300">{runError}</p>
+              </div>
+            )}
+            {!output && !submissionResult && !runError && <p className="mt-2 text-xs text-gray-500">Run your code to see results here.</p>}
           </div>
         </div>
       </div>

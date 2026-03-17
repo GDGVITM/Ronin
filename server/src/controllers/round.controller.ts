@@ -61,3 +61,36 @@ export async function getRoundProblems(req: Request, res: Response) {
   });
   return res.json(problems);
 }
+
+export async function getMyProctoringStatus(req: Request, res: Response) {
+  const roundNumber = Number(req.params.roundNumber);
+  if (![1, 2, 3].includes(roundNumber)) {
+    return res.status(400).json({ message: "Invalid round number." });
+  }
+
+  const userId = req.auth?.userId;
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized." });
+  }
+
+  const status = await prisma.proctoringStatus.findUnique({
+    where: { userId_roundNumber: { userId, roundNumber } },
+    select: {
+      roundNumber: true,
+      fullscreen: true,
+      tabSwitchCount: true,
+      warned: true,
+      banned: true,
+    },
+  });
+
+  return res.json(
+    status ?? {
+      roundNumber,
+      fullscreen: false,
+      tabSwitchCount: 0,
+      warned: false,
+      banned: false,
+    }
+  );
+}

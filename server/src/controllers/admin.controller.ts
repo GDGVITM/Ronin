@@ -63,3 +63,65 @@ export async function adminResetRound(req: Request, res: Response) {
     return res.status(400).json({ message: (error as Error).message });
   }
 }
+
+export async function listProctoringStatuses(_req: Request, res: Response) {
+  const rows = await prisma.proctoringStatus.findMany({
+    where: { user: { role: "PARTICIPANT" } },
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: [{ roundNumber: "asc" }, { updatedAt: "desc" }],
+  });
+
+  return res.json(
+    rows.map((r) => ({
+      userId: r.userId,
+      userName: r.user.name,
+      roundNumber: r.roundNumber,
+      fullscreen: r.fullscreen,
+      tabSwitchCount: r.tabSwitchCount,
+      warned: r.warned,
+      banned: r.banned,
+      updatedAt: r.updatedAt,
+    }))
+  );
+}
+
+export async function adminUnblockParticipant(req: Request, res: Response) {
+  const { userId, roundNumber } = req.body as { userId?: string; roundNumber?: number };
+  if (!userId || !roundNumber || ![1, 2, 3].includes(Number(roundNumber))) {
+    return res.status(400).json({ message: "userId and valid roundNumber are required." });
+  }
+
+  const status = await prisma.proctoringStatus.upsert({
+    where: { userId_roundNumber: { userId, roundNumber: Number(roundNumber) } },
+    update: {
+      banned: false,
+      warned: false,
+      tabSwitchCount: 0,
+      fullscreen: false,
+    },
+    create: {
+      userId,
+      roundNumber: Number(roundNumber),
+      banned: false,
+      warned: false,
+      tabSwitchCount: 0,
+      fullscreen: false,
+    },
+    include: { user: { select: { name: true } } },
+  });
+
+  const io = getIO();
+  io.to("admins").emit("exam:status:update", {
+    userId: status.userId,
+    userName: status.user.name,
+    roundNumber: status.roundNumber,
+    fullscreen: status.fullscreen,
+    tabSwitchCount: status.tabSwitchCount,
+    warned: status.warned,
+    banned: status.banned,
+    updatedAt: status.updatedAt.toISOString(),
+  });
+  io.to(`user:${status.userId}`).emit("exam:unblocked", { roundNumber: status.roundNumber });
+
+  return res.json({ message: `${status.user.name} unblocked for round ${status.roundNumber}.` });
+}

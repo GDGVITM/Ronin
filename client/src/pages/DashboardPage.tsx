@@ -12,16 +12,35 @@ export function DashboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   useEffect(() => {
-    http.get<EventState>("/round/event-state").then(({ data }) => setEventState(data)).catch(() => null);
-    http.get<LeaderboardEntry[]>("/round/leaderboard/global").then(({ data }) => setLeaderboard(data)).catch(() => null);
-  }, []);
+    const loadDashboardData = async () => {
+      try {
+        const [{ data: event }, { data: board }] = await Promise.all([
+          http.get<EventState>("/round/event-state"),
+          http.get<LeaderboardEntry[]>("/round/leaderboard/global"),
+        ]);
+        setEventState(event);
+        setLeaderboard(board);
+      } catch {
+        // Keep current UI state on transient fetch errors.
+      }
+    };
 
-  useEffect(() => {
+    void loadDashboardData();
+
     const socket = getSocket();
     if (!socket) return;
-    const handler = (data: { roundNumber: number; eventState: EventState }) => { setEventState(data.eventState); };
-    socket.on("round:started", handler);
-    return () => { socket.off("round:started", handler); };
+
+    const refreshOnRoundChange = () => {
+      void loadDashboardData();
+    };
+
+    socket.on("round:started", refreshOnRoundChange);
+    socket.on("round:reset", refreshOnRoundChange);
+
+    return () => {
+      socket.off("round:started", refreshOnRoundChange);
+      socket.off("round:reset", refreshOnRoundChange);
+    };
   }, []);
 
   const roundNames = ["", "Shadow Tactics", "Shrine Of Wisdom", "Khan's Ultimatum"];
@@ -31,7 +50,7 @@ export function DashboardPage() {
     "1v1 Debugging MCQ — Find bugs in Java code faster than your opponent",
     "MVP Building — Build a working prototype from a problem statement",
   ];
-  const roundIcons = ["", "⚔️", "🧠", "👑"];
+  const roundIcons = ["", "R1", "R2", "R3"];
 
   const myEntry = leaderboard.find((e) => e.id === user?.id);
 
@@ -85,7 +104,7 @@ export function DashboardPage() {
           <div className="glass-card border-ghost-gold/30 p-5 mb-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold text-ghost-gold uppercase tracking-widest mb-1">🔴 Round {eventState.currentRound} is LIVE</p>
+                <p className="text-xs font-semibold text-ghost-gold uppercase tracking-widest mb-1">Round {eventState.currentRound} is LIVE</p>
                 <p className="text-xl font-bold">{roundNames[eventState.currentRound]}</p>
                 <p className="text-sm text-gray-300 mt-1">{roundDescs[eventState.currentRound]}</p>
               </div>
@@ -119,7 +138,7 @@ export function DashboardPage() {
                 className={`glass-card p-5 group transition-all duration-200 hover:-translate-y-1 hover:border-ghost-gold/25 ${isLive ? "border-ghost-gold/35" : ""}`}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-2xl">{roundIcons[r]}</span>
+                  <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-ghost-gold/30 px-2 text-xs font-bold tracking-wide text-ghost-gold">{roundIcons[r]}</span>
                   {isLive && <span className="contest-live-dot text-xs text-ghost-green font-semibold">LIVE</span>}
                 </div>
                 <p className="text-xs uppercase tracking-widest text-gray-500">Round {r}</p>
@@ -134,7 +153,7 @@ export function DashboardPage() {
         <section className="glass-card overflow-hidden">
           <div className="px-5 py-4 border-b border-white/7">
             <h2 className="font-semibold text-ghost-gold" style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "13px", letterSpacing: ".1em" }}>
-              🏆 Leaderboard
+              Leaderboard
             </h2>
           </div>
           <div className="divide-y divide-white/5">

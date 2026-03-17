@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
 import { getIO } from "../socket/index.js";
+import {
+  getCurrentRound2QuestionState,
+  isRound2QuestionPushed,
+  markRound2QuestionPushed,
+} from "../services/quiz-push-state.service.js";
 
 export async function createQuizQuestion(req: Request, res: Response) {
   const { questionText, codeSnippet, options, correctIndex, timeLimit, points, roundNumber } =
@@ -30,7 +35,8 @@ export async function createQuizQuestion(req: Request, res: Response) {
 
 export async function listQuizQuestions(_req: Request, res: Response) {
   const questions = await prisma.quizQuestion.findMany({ orderBy: { createdAt: "asc" } });
-  return res.json(questions);
+  const filtered = questions.filter((q) => !(q.roundNumber === 2 && isRound2QuestionPushed(q.id)));
+  return res.json(filtered);
 }
 
 export async function submitQuizAnswer(req: Request, res: Response) {
@@ -45,13 +51,9 @@ export async function submitQuizAnswer(req: Request, res: Response) {
     return res.status(404).json({ message: "Question not found." });
   }
 
-  // Prevent duplicate answers
   const existing = await prisma.quizResponse.findFirst({
     where: { userId: req.auth!.userId, questionId },
   });
-  if (existing) {
-    return res.status(400).json({ message: "Already answered this question." });
-  }
 
   const isCorrect = selectedIndex === question.correctIndex;
   const pointsEarned = isCorrect
@@ -63,22 +65,33 @@ export async function submitQuizAnswer(req: Request, res: Response) {
       )
     : 0;
 
-  const response = await prisma.quizResponse.create({
-    data: {
-      userId: req.auth!.userId,
-      questionId,
-      selectedIndex,
-      isCorrect,
-      responseTime,
-      pointsEarned,
-    },
-  });
+  const response = existing
+    ? await prisma.quizResponse.update({
+        where: { id: existing.id },
+        data: {
+          selectedIndex,
+          isCorrect,
+          responseTime,
+          pointsEarned,
+        },
+      })
+    : await prisma.quizResponse.create({
+        data: {
+          userId: req.auth!.userId,
+          questionId,
+          selectedIndex,
+          isCorrect,
+          responseTime,
+          pointsEarned,
+        },
+      });
 
-  // Update user bits
-  if (pointsEarned > 0) {
+  // Keep bits in sync when a participant changes answer before timeout.
+  const delta = pointsEarned - (existing?.pointsEarned ?? 0);
+  if (delta !== 0) {
     await prisma.user.update({
       where: { id: req.auth!.userId },
-      data: { bits: { increment: pointsEarned } },
+      data: { bits: { increment: delta } },
     });
   }
 
@@ -90,7 +103,13 @@ export async function submitQuizAnswer(req: Request, res: Response) {
     correctIndex: question.correctIndex,
   });
 
-  return res.status(201).json(response);
+  return res.status(existing ? 200 : 201).json({
+    responseId: response.id,
+    questionId,
+    isCorrect,
+    pointsEarned,
+    correctIndex: question.correctIndex,
+  });
 }
 
 export async function pushQuestion(req: Request, res: Response) {
@@ -101,17 +120,30 @@ export async function pushQuestion(req: Request, res: Response) {
     return res.status(404).json({ message: "Question not found." });
   }
 
-  const io = getIO();
-  io.to("round2").emit("round2:question", {
+  if (question.roundNumber === 2 && isRound2QuestionPushed(question.id)) {
+    return res.status(400).json({ message: "Question already pushed. Reset round 2 to reuse." });
+  }
+
+  const payload: CurrentRound2Question = {
     id: question.id,
     questionText: question.questionText,
     codeSnippet: question.codeSnippet,
     options: question.options,
     timeLimit: question.timeLimit,
     points: question.points,
-  });
+    pushedAt: new Date().toISOString(),
+  };
+
+  markRound2QuestionPushed(payload);
+
+  const io = getIO();
+  io.emit("round2:question", payload);
 
   return res.json({ message: "Question pushed." });
+}
+
+export async function getCurrentRound2Question(_req: Request, res: Response) {
+  return res.json(getCurrentRound2QuestionState());
 }
 
 export async function getQuizLeaderboard(_req: Request, res: Response) {

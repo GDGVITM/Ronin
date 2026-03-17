@@ -44,6 +44,45 @@ export function GdgLogo() {
   );
 }
 
+/* ─── Social Icons ─────────────────────────────────────────────────────── */
+function IconInstagram() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  );
+}
+
+function IconLinkedIn() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+      <rect x="2" y="9" width="4" height="12" />
+      <circle cx="4" cy="4" r="2" />
+    </svg>
+  );
+}
+
+function IconGlobe() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
+
+function IconGitHub() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+    </svg>
+  );
+}
+
 /* ─── Creepy floating particles (GPU-only: transform + opacity) ──── */
 const PARTICLES = Array.from({ length: 8 }, (_, i) => ({
   id: i,
@@ -258,11 +297,12 @@ export function LandingPage() {
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
   const socialItems = [
-    { label: "IG", href: "https://instagram.com" },
-    { label: "X",  href: "https://x.com" },
-    { label: "IN", href: "https://linkedin.com" },
-    { label: "YT", href: "https://youtube.com" },
+    { label: "Instagram",  icon: <IconInstagram />, href: "https://www.instagram.com/gdg_vit/" },
+    { label: "GDG Website", icon: <IconGlobe />,    href: "https://gdgsite.vercel.app/" },
+    { label: "LinkedIn",   icon: <IconLinkedIn />,  href: "https://www.linkedin.com/company/google-developer-groups-vit-mumbai/posts/?feedView=all" },
+    { label: "GitHub",     icon: <IconGitHub />,    href: "https://github.com/GDGVITM/" },
   ];
+
 
   const showIntroOverlay = introStage !== "done";
   const showGhost        = introStage === "ghost" || introStage === "strike";
@@ -310,7 +350,7 @@ export function LandingPage() {
             </Link>
             {socialItems.map((item) => (
               <a key={item.label} href={item.href} target="_blank" rel="noreferrer" className="contest-social-chip" aria-label={item.label}>
-                {item.label}
+                {item.icon}
               </a>
             ))}
           </div>
@@ -334,7 +374,7 @@ export function LandingPage() {
         <Link to="/about" className="mobile-menu-link" onClick={() => setMenuOpen(false)}>About Event</Link>
         <div className="flex items-center gap-3 mt-2">
           {socialItems.map((item) => (
-            <a key={item.label} href={item.href} target="_blank" rel="noreferrer" className="contest-social-chip" aria-label={item.label}>{item.label}</a>
+            <a key={item.label} href={item.href} target="_blank" rel="noreferrer" className="contest-social-chip" aria-label={item.label}>{item.icon}</a>
           ))}
         </div>
         <div className="flex flex-col gap-3 mt-5 w-full max-w-xs px-6">
@@ -480,7 +520,7 @@ export function LandingPage() {
               <rect x="170" y="52" width="130" height="46" rx="8"
                 fill="rgba(14,18,30,0.92)" stroke="rgba(231,76,60,0.45)" strokeWidth="1" />
               <text x="235" y="72" textAnchor="middle" className="node-round-num" fill="rgba(231,76,60,0.9)" fontSize="9" fontFamily="Orbitron, sans-serif" letterSpacing="2" fontWeight="700">ROUND 1</text>
-              <text x="235" y="88" textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize="10.5" fontFamily="Plus Jakarta Sans, sans-serif" fontWeight="600">Shadow Tactics</text>
+              <text x="235" y="88" textAnchor="middle" className="node-label-text" fontSize="10.5" fontFamily="Plus Jakarta Sans, sans-serif" fontWeight="600">Shadow Tactics</text>
             </g>
 
             {/* ── NODE 2 — Round 2 ──────────────────────── */}
@@ -491,7 +531,7 @@ export function LandingPage() {
               <rect x="445" y="-10" width="130" height="46" rx="8"
                 fill="rgba(14,18,30,0.92)" stroke="rgba(56,189,248,0.45)" strokeWidth="1" />
               <text x="510" y="10" textAnchor="middle" fill="rgba(56,189,248,0.9)" fontSize="9" fontFamily="Orbitron, sans-serif" letterSpacing="2" fontWeight="700">ROUND 2</text>
-              <text x="510" y="26" textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize="10.5" fontFamily="Plus Jakarta Sans, sans-serif" fontWeight="600">Shrine of Wisdom</text>
+              <text x="510" y="26" textAnchor="middle" className="node-label-text" fontSize="10.5" fontFamily="Plus Jakarta Sans, sans-serif" fontWeight="600">Shrine of Wisdom</text>
             </g>
 
             {/* ── NODE 3 — Round 3 ──────────────────────── */}
@@ -502,7 +542,7 @@ export function LandingPage() {
               <rect x="725" y="218" width="130" height="46" rx="8"
                 fill="rgba(14,18,30,0.92)" stroke="rgba(251,191,36,0.45)" strokeWidth="1" />
               <text x="790" y="238" textAnchor="middle" fill="rgba(251,191,36,0.9)" fontSize="9" fontFamily="Orbitron, sans-serif" letterSpacing="2" fontWeight="700">ROUND 3</text>
-              <text x="790" y="254" textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize="10.5" fontFamily="Plus Jakarta Sans, sans-serif" fontWeight="600">Khan's Ultimatum</text>
+              <text x="790" y="254" textAnchor="middle" className="node-label-text" fontSize="10.5" fontFamily="Plus Jakarta Sans, sans-serif" fontWeight="600">Khan's Ultimatum</text>
             </g>
 
             {/* Finish flag glow */}

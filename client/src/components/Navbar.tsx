@@ -21,14 +21,17 @@ export function Navbar() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const navLinks = [
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/round/1",   label: "Round 1" },
-    { to: "/round/2",   label: "Round 2" },
-    { to: "/round/3",   label: "Round 3" },
-  ];
-
-  if (user.role === "ADMIN") navLinks.push({ to: "/admin", label: "Admin" });
+  const navLinks = user.role === "ADMIN"
+    ? [
+        { to: "/dashboard", label: "Dashboard" },
+        { to: "/admin", label: "Admin" },
+      ]
+    : [
+        { to: "/dashboard", label: "Dashboard" },
+        { to: "/round/1", label: "Round 1" },
+        { to: "/round/2", label: "Round 2" },
+        { to: "/round/3", label: "Round 3" },
+      ];
 
   return (
     <>
@@ -41,7 +44,7 @@ export function Navbar() {
           </Link>
 
           {/* Center: nav links (desktop) */}
-          <div className="hidden md:flex items-center gap-0.5">
+          <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -58,7 +61,7 @@ export function Navbar() {
           </div>
 
           {/* Right: ghost icon + user + logout */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {/* Tiny ghost avatar */}
             <div className="hidden sm:block" style={{ width: "24px", height: "28px", overflow: "hidden", position: "relative" }}>
               <div style={{ position: "absolute", top: "-4px", left: "-8px" }}>

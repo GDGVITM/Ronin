@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { http } from "../api/http";
 import { useAuthStore } from "../store/auth.store";
-import { getSocket } from "../socket/client";
+import { connectSocket, getSocket } from "../socket/client";
+import { useExamMode } from "../hooks/useExamMode";
 import type { QuizPushedQuestion, Matchup } from "../types";
 
 type AnswerAck = {
@@ -11,12 +12,15 @@ type AnswerAck = {
   correctIndex: number;
 };
 
+type PushedQuestionPayload = QuizPushedQuestion & { pushedAt?: string };
+
 type QuizState = "WAITING" | "ANSWERING" | "RESULT";
 
 type LeaderEntry = { userId: string; userName: string; totalQuizPoints: number; bits: number };
 
 export function Round2Page() {
   const user = useAuthStore((s) => s.user);
+  const token = useAuthStore((s) => s.token);
   const [state, setState] = useState<QuizState>("WAITING");
   const [question, setQuestion] = useState<QuizPushedQuestion | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -26,15 +30,56 @@ export function Round2Page() {
   const [totalScore, setTotalScore] = useState(0);
   const [questionCount, setQuestionCount] = useState(0);
   const [matchup, setMatchup] = useState<Matchup | null>(null);
+  const [lastPushKey, setLastPushKey] = useState<string | null>(null);
+  const [submitToast, setSubmitToast] = useState<{ text: string; tone: "success" | "error" } | null>(null);
+  const [showCorrectPopup, setShowCorrectPopup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const pushKeyOf = (q: PushedQuestionPayload) => `${q.id}:${q.pushedAt ?? ""}`;
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
+  const latestAnswerAckRef = useRef<AnswerAck | null>(null);
+  const selectedIndexRef = useRef<number | null>(null);
+  const hasSubmittedRef = useRef(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const {
+    violationLocked,
+    warningMessage,
+    bannedMessage,
+    clearWarning,
+  } = useExamMode("Round 2", 2);
 
   const fetchLeaderboard = useCallback(async () => {
     try {
       const { data } = await http.get<LeaderEntry[]>("/quiz/leaderboard");
       setLeaderboard(data);
+      const me = data.find((entry) => entry.userId === user?.id);
+      setTotalScore(me?.totalQuizPoints ?? 0);
     } catch { /* */ }
-  }, []);
+  }, [user?.id]);
+
+  const syncCurrentQuestion = useCallback(async () => {
+    try {
+      const { data } = await http.get<PushedQuestionPayload | null>("/quiz/current-question");
+      if (!data) return;
+      const key = pushKeyOf(data);
+      if (key === lastPushKey) return;
+      setLastPushKey(key);
+      setQuestion(data);
+      setSelectedIndex(null);
+      selectedIndexRef.current = null;
+      hasSubmittedRef.current = false;
+      latestAnswerAckRef.current = null;
+      setAnswerResult(null);
+      setIsSubmitting(false);
+      setTimeLeft(data.timeLimit);
+      startTimeRef.current = Date.now();
+      setState("ANSWERING");
+      setQuestionCount((c) => c + 1);
+    } catch {
+      // Ignore sync errors.
+    }
+  }, [lastPushKey]);
 
   // Fetch matchup
   useEffect(() => {
@@ -46,15 +91,25 @@ export function Round2Page() {
   }, [user]);
 
   useEffect(() => {
-    const socket = getSocket();
+    let socket = getSocket();
+    if (!socket && token) {
+      socket = connectSocket(token);
+    }
     if (!socket) return;
 
     socket.emit("room:join", "round2");
 
-    const handleQuestion = (q: QuizPushedQuestion) => {
+    const handleQuestion = (q: PushedQuestionPayload) => {
+      const key = pushKeyOf(q);
+      if (key === lastPushKey) return;
+      setLastPushKey(key);
       setQuestion(q);
       setSelectedIndex(null);
+      selectedIndexRef.current = null;
+      hasSubmittedRef.current = false;
+      latestAnswerAckRef.current = null;
       setAnswerResult(null);
+      setIsSubmitting(false);
       setTimeLeft(q.timeLimit);
       startTimeRef.current = Date.now();
       setState("ANSWERING");
@@ -62,21 +117,57 @@ export function Round2Page() {
     };
 
     const handleAck = (ack: AnswerAck) => {
-      setAnswerResult(ack);
-      setState("RESULT");
-      setTotalScore((s) => s + ack.pointsEarned);
+      latestAnswerAckRef.current = ack;
+    };
+
+    const handleRoundReset = (data: { roundNumber: number }) => {
+      if (data.roundNumber !== 2) return;
       if (timerRef.current) clearInterval(timerRef.current);
+      setState("WAITING");
+      setQuestion(null);
+      setSelectedIndex(null);
+      selectedIndexRef.current = null;
+      hasSubmittedRef.current = false;
+      latestAnswerAckRef.current = null;
+      setAnswerResult(null);
+      setIsSubmitting(false);
+      setTimeLeft(0);
+      setTotalScore(0);
+      setQuestionCount(0);
       fetchLeaderboard();
+    };
+
+    const handleRoundStarted = (data: { roundNumber: number }) => {
+      if (data.roundNumber !== 2) return;
+      fetchLeaderboard();
+      void syncCurrentQuestion();
     };
 
     socket.on("round2:question", handleQuestion);
     socket.on("quiz:answer-ack", handleAck);
+    socket.on("round:reset", handleRoundReset);
+    socket.on("round:started", handleRoundStarted);
     return () => {
       socket.emit("room:leave", "round2");
       socket.off("round2:question", handleQuestion);
       socket.off("quiz:answer-ack", handleAck);
+      socket.off("round:reset", handleRoundReset);
+      socket.off("round:started", handleRoundStarted);
     };
-  }, [fetchLeaderboard]);
+  }, [fetchLeaderboard, token, lastPushKey, syncCurrentQuestion]);
+
+  useEffect(() => {
+    const poll = setInterval(() => {
+      void syncCurrentQuestion();
+    }, 1000);
+
+    return () => clearInterval(poll);
+  }, [syncCurrentQuestion]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+    void syncCurrentQuestion();
+  }, [fetchLeaderboard, syncCurrentQuestion]);
 
   useEffect(() => {
     if (state !== "ANSWERING" || !question) return;
@@ -84,7 +175,6 @@ export function Round2Page() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           if (timerRef.current) clearInterval(timerRef.current);
-          setState("RESULT");
           return 0;
         }
         return prev - 1;
@@ -93,13 +183,104 @@ export function Round2Page() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [state, question]);
 
-  async function handleAnswer(index: number) {
-    if (selectedIndex !== null || !question) return;
-    setSelectedIndex(index);
+  useEffect(() => {
+    if (state !== "ANSWERING" || !question || timeLeft !== 0) return;
+    const selected = selectedIndexRef.current;
+    if (selected === null) {
+      setState("RESULT");
+      return;
+    }
+    const latest = latestAnswerAckRef.current;
+    if (latest && latest.questionId === question.id) {
+      hasSubmittedRef.current = true;
+      setAnswerResult(latest);
+      if (latest.isCorrect) setShowCorrectPopup(true);
+      setState("RESULT");
+      if (timerRef.current) clearInterval(timerRef.current);
+      void fetchLeaderboard();
+      return;
+    }
+    void handleAnswer(selected, true);
+  }, [state, question, timeLeft]);
+
+  useEffect(() => {
+    if (state !== "RESULT" || !question || answerResult) return;
+    const selected = selectedIndexRef.current;
+    if (selected === null || hasSubmittedRef.current) return;
+    void handleAnswer(selected, true);
+  }, [state, question, answerResult]);
+
+  useEffect(() => {
+    if (state !== "ANSWERING" || !question || selectedIndex === null) return;
+    const timer = setTimeout(() => {
+      void handleAnswer(selectedIndex, false);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [state, question, selectedIndex]);
+
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  function showSubmitToast(text: string, tone: "success" | "error") {
+    setSubmitToast({ text, tone });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setSubmitToast(null);
+    }, 2500);
+  }
+
+  async function handleAnswer(index: number, finalize: boolean) {
+    if (!question) return;
+    if (finalize && hasSubmittedRef.current) return;
+    if (finalize) {
+      hasSubmittedRef.current = true;
+      setIsSubmitting(true);
+    }
     const responseTime = Date.now() - startTimeRef.current;
-    try {
-      await http.post("/quiz/answer", { questionId: question.id, selectedIndex: index, responseTime });
-    } catch { /* ack via socket */ }
+    const maxAttempts = finalize ? 3 : 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const { data } = await http.post<AnswerAck>("/quiz/answer", {
+          questionId: question.id,
+          selectedIndex: index,
+          responseTime,
+        });
+
+        latestAnswerAckRef.current = data;
+
+        if (finalize) {
+          const ts = new Date().toLocaleTimeString();
+          showSubmitToast(`Answer submitted at ${ts}`, "success");
+          setAnswerResult(data);
+          if (data.isCorrect) setShowCorrectPopup(true);
+          setState("RESULT");
+          if (timerRef.current) clearInterval(timerRef.current);
+          void fetchLeaderboard();
+          setIsSubmitting(false);
+        }
+        return;
+      } catch {
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 350));
+          continue;
+        }
+      }
+      if (!finalize) {
+        return;
+      }
+      hasSubmittedRef.current = false;
+      setIsSubmitting(false);
+      showSubmitToast("Submission failed. Please try again.", "error");
+      setState("RESULT");
+      return;
+    }
   }
 
   const opponent = matchup
@@ -107,8 +288,49 @@ export function Round2Page() {
     : null;
   const timerPercent = question ? (timeLeft / question.timeLimit) * 100 : 0;
 
+  useEffect(() => {
+    if (!showCorrectPopup) return;
+    const id = setTimeout(() => setShowCorrectPopup(false), 1800);
+    return () => clearTimeout(id);
+  }, [showCorrectPopup]);
+
   return (
     <div className="flex h-[calc(100vh-49px)] flex-col text-white">
+      {showCorrectPopup && (
+        <div className="fixed inset-0 z-[68] flex items-center justify-center bg-black/50 p-6">
+          <div className="rounded-xl border border-ghost-green/60 bg-ghost-panel px-10 py-8 text-center shadow-[0_0_32px_rgba(46,204,113,0.35)]">
+            <h2 className="text-4xl font-bold text-ghost-green">CORRECT</h2>
+            <p className="mt-2 text-sm text-gray-300">Great pick. Points awarded.</p>
+          </div>
+        </div>
+      )}
+
+      {submitToast && (
+        <div className="pointer-events-none fixed right-4 top-20 z-[65]">
+          <div className={`rounded-lg px-4 py-2 text-sm shadow-lg ${submitToast.tone === "success" ? "bg-ghost-green/20 text-ghost-green border border-ghost-green/40" : "bg-ghost-red/20 text-ghost-red border border-ghost-red/40"}`}>
+            {submitToast.text}
+          </div>
+        </div>
+      )}
+
+      {violationLocked && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-6">
+          <p className="text-center text-3xl font-bold text-red-500">{bannedMessage || "You are banned due to multiple tab switches"}</p>
+        </div>
+      )}
+
+      {warningMessage && !violationLocked && (
+        <div className="pointer-events-none fixed right-4 top-20 z-[61] max-w-md">
+          <div className="pointer-events-auto rounded-xl border border-amber-400/40 bg-ghost-panel/95 p-4 shadow-lg backdrop-blur">
+            <p className="text-xs font-semibold text-amber-300">{warningMessage}</p>
+            <button className="mt-2 rounded bg-amber-300 px-3 py-1.5 text-xs font-semibold text-black" onClick={clearWarning}>OK</button>
+          </div>
+        </div>
+      )}
+
+
+
+
       {/* Header */}
       <div className="border-b border-gray-800 bg-ghost-panel px-6 py-3">
         <div className="flex items-center justify-between">
@@ -174,17 +396,19 @@ export function Round2Page() {
                     key={i}
                     className={`rounded-lg border-2 p-4 text-left text-sm font-medium transition-all ${
                       selectedIndex === i
-                        ? "border-ghost-gold bg-ghost-gold/20 text-ghost-gold"
+                        ? "border-ghost-gold bg-ghost-gold/20 text-ghost-gold ring-2 ring-ghost-gold/35"
                         : "border-gray-700 bg-ghost-panel hover:border-gray-500"
-                    } ${selectedIndex !== null ? "cursor-not-allowed" : "cursor-pointer"}`}
-                    onClick={() => handleAnswer(i)}
-                    disabled={selectedIndex !== null}
+                    } ${hasSubmittedRef.current || isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}`}
+                    onClick={() => setSelectedIndex(i)}
+                    disabled={violationLocked || hasSubmittedRef.current || isSubmitting}
                   >
                     <span className="mr-3 font-bold text-gray-500">{String.fromCharCode(65 + i)}.</span>
                     {option}
+                    {selectedIndex === i && <span className="ml-3 text-xs font-semibold text-ghost-gold">(selected)</span>}
                   </button>
                 ))}
               </div>
+              {isSubmitting && <p className="mt-3 text-center text-xs text-ghost-gold">Submitting your answer...</p>}
             </div>
           )}
 

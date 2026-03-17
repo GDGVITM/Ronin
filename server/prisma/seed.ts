@@ -29,6 +29,16 @@ async function main() {
     create: { id: "singleton", currentRound: 0 },
   });
 
+  // Keep seed deterministic across repeated runs.
+  await prisma.$transaction([
+    prisma.submission.deleteMany({}),
+    prisma.matchup.deleteMany({}),
+    prisma.quizResponse.deleteMany({}),
+    prisma.proctoringStatus.deleteMany({}),
+    prisma.quizQuestion.deleteMany({}),
+    prisma.problem.deleteMany({}),
+  ]);
+
   // ── Round 1: Algorithmic Coding Problems (Java) ──
 
   const p1 = await prisma.problem.create({
@@ -132,6 +142,70 @@ public class SpamFilter {
           { input: "5 3\n1 2 4 6 7", expected: "2", isHidden: false },
           { input: "5 2\n1 3 5 7 9", expected: "0", isHidden: false },
           { input: "5 5\n1 2 3 4 5", expected: "4", isHidden: true },
+        ],
+      },
+    },
+  });
+
+  await prisma.problem.create({
+    data: {
+      title: "Session Window Analyzer",
+      description: `A platform records login durations in minutes for N users. You are given a threshold K and must find the longest contiguous segment where every duration is <= K.
+
+Input Format:
+- First line: N K
+- Second line: N space-separated integers
+
+Output Format:
+- Length of the longest valid contiguous segment.`,
+      difficulty: "Medium",
+      roundNumber: 1,
+      starterCode: `import java.util.*;
+
+public class SessionAnalyzer {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        // Your code here
+    }
+}`,
+      timeLimit: 900,
+      testCases: {
+        create: [
+          { input: "8 5\n2 3 6 1 4 5 7 2", expected: "3", isHidden: false },
+          { input: "5 10\n1 2 3 4 5", expected: "5", isHidden: false },
+          { input: "6 3\n4 4 4 4 4 4", expected: "0", isHidden: true },
+        ],
+      },
+    },
+  });
+
+  await prisma.problem.create({
+    data: {
+      title: "Deadline Burst Scheduler",
+      description: `You have N jobs. Each job takes 1 unit time and has a deadline d and reward r. You can complete at most one job per time slot. Maximize total reward by scheduling before deadlines.
+
+Input Format:
+- First line: N
+- Next N lines: deadline reward
+
+Output Format:
+- Maximum total reward.`,
+      difficulty: "Medium",
+      roundNumber: 1,
+      starterCode: `import java.util.*;
+
+public class BurstScheduler {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        // Your code here
+    }
+}`,
+      timeLimit: 900,
+      testCases: {
+        create: [
+          { input: "4\n4 70\n1 80\n1 30\n2 100", expected: "250", isHidden: false },
+          { input: "3\n1 20\n2 50\n2 10", expected: "70", isHidden: false },
+          { input: "5\n2 100\n1 19\n2 27\n1 25\n3 15", expected: "142", isHidden: true },
         ],
       },
     },
@@ -342,11 +416,15 @@ Time: You have the full round duration to build this on VS Code.`,
     },
   });
 
+  const round1Count = await prisma.problem.count({ where: { roundNumber: 1 } });
+  const round2QuizCount = await prisma.quizQuestion.count({ where: { roundNumber: 2 } });
+  const round3Count = await prisma.problem.count({ where: { roundNumber: 3 } });
+
   console.log("Seed complete.");
   console.log("  Admin: admin@gdg.local / Admin@123");
-  console.log(`  Round 1 problems: 3 (IDs: ${p1.id}, ${p2.id}, ${p3.id})`);
-  console.log("  Round 2 quiz questions: 6");
-  console.log("  Round 3 MVP problems: 2");
+  console.log(`  Round 1 problems: ${round1Count} (base IDs: ${p1.id}, ${p2.id}, ${p3.id})`);
+  console.log(`  Round 2 quiz questions: ${round2QuizCount}`);
+  console.log(`  Round 3 MVP problems: ${round3Count}`);
 }
 
 main()

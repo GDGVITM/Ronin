@@ -1,9 +1,43 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
 import { env } from "../config/env.js";
+import { prisma } from "../config/prisma.js";
 import { verifyToken } from "../utils/jwt.js";
 
 let io: Server | null = null;
+
+type ExamStatus = {
+  userId: string;
+  userName: string;
+  roundNumber: number;
+  fullscreen: boolean;
+  tabSwitchCount: number;
+  warned: boolean;
+  banned: boolean;
+  updatedAt: string;
+};
+
+function toExamStatus(row: {
+  userId: string;
+  roundNumber: number;
+  fullscreen: boolean;
+  tabSwitchCount: number;
+  warned: boolean;
+  banned: boolean;
+  updatedAt: Date;
+  user: { name: string };
+}): ExamStatus {
+  return {
+    userId: row.userId,
+    userName: row.user.name,
+    roundNumber: row.roundNumber,
+    fullscreen: row.fullscreen,
+    tabSwitchCount: row.tabSwitchCount,
+    warned: row.warned,
+    banned: row.banned,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
 
 export function getIO(): Server {
   if (!io) throw new Error("Socket.io not initialized");
@@ -32,9 +66,18 @@ export function createSocketServer(server: HttpServer) {
     }
   });
 
-  io.on("connection", (socket) => {
+  io.on("connection", async (socket) => {
     const user = socket.data.user as { userId: string; role: string };
     socket.join(`user:${user.userId}`);
+    if (user.role === "ADMIN") {
+      socket.join("admins");
+      const snapshot = await prisma.proctoringStatus.findMany({
+        where: { user: { role: "PARTICIPANT" } },
+        include: { user: { select: { name: true } } },
+        orderBy: [{ roundNumber: "asc" }, { updatedAt: "desc" }],
+      });
+      socket.emit("exam:status:snapshot", snapshot.map(toExamStatus));
+    }
 
     socket.on("room:join", (room: string) => {
       socket.join(room);
@@ -51,6 +94,99 @@ export function createSocketServer(server: HttpServer) {
         code: data.code,
       });
     });
+
+    socket.on(
+      "exam:status:update",
+      async (data: { roundNumber: number; fullscreen: boolean; tabSwitchCount: number; eventType?: "STATUS" | "TAB_SWITCH" }) => {
+        if (user.role !== "PARTICIPANT") return;
+        const roundNumber = Number(data.roundNumber);
+        if (![1, 2, 3].includes(roundNumber)) return;
+
+        const participant = await prisma.user.findUnique({
+          where: { id: user.userId },
+          select: { name: true },
+        });
+        if (!participant) return;
+
+        if (roundNumber === 1) {
+          const won = await prisma.matchup.findFirst({
+            where: { roundNumber: 1, winnerId: user.userId, status: "COMPLETED" },
+            select: { id: true },
+          });
+          if (won) {
+            await prisma.proctoringStatus.deleteMany({ where: { userId: user.userId, roundNumber } });
+            io!.to("admins").emit("exam:status:remove", { userId: user.userId, roundNumber });
+            return;
+          }
+        }
+
+        const existing = await prisma.proctoringStatus.findUnique({
+          where: { userId_roundNumber: { userId: user.userId, roundNumber } },
+        });
+
+        let tabSwitchCount = existing?.tabSwitchCount ?? 0;
+        let warned = existing?.warned ?? false;
+        let banned = existing?.banned ?? false;
+        let fullscreen = Boolean(data.fullscreen) && !banned;
+
+        if (data.eventType === "TAB_SWITCH") {
+          tabSwitchCount += 1;
+          warned = tabSwitchCount >= 1;
+          if (tabSwitchCount >= 2) {
+            banned = true;
+            fullscreen = false;
+          }
+        }
+
+        const updated = await prisma.proctoringStatus.upsert({
+          where: { userId_roundNumber: { userId: user.userId, roundNumber } },
+          update: { fullscreen, tabSwitchCount, warned, banned },
+          create: {
+            userId: user.userId,
+            roundNumber,
+            fullscreen,
+            tabSwitchCount,
+            warned,
+            banned,
+          },
+          include: { user: { select: { name: true } } },
+        });
+
+        const status = toExamStatus(updated);
+        io!.to("admins").emit("exam:status:update", status);
+
+        if (data.eventType === "TAB_SWITCH") {
+          io!.to("admins").emit("exam:tab-switch", status);
+          if (status.banned) {
+            io!.to(`user:${status.userId}`).emit("exam:banned", {
+              roundNumber,
+              message: "You are banned due to multiple tab switches",
+            });
+          } else {
+            io!.to(`user:${status.userId}`).emit("exam:warning", {
+              roundNumber,
+              message: "Warning: Switching tabs again will result in a ban.",
+            });
+          }
+        } else if (status.banned) {
+          io!.to(`user:${status.userId}`).emit("exam:banned", {
+            roundNumber,
+            message: "You are banned due to multiple tab switches",
+          });
+        }
+      }
+    );
+
+    socket.on("exam:exclude", async (data: { roundNumber: number }) => {
+      if (user.role !== "PARTICIPANT") return;
+      const roundNumber = Number(data.roundNumber);
+      if (![1, 2, 3].includes(roundNumber)) return;
+
+      await prisma.proctoringStatus.deleteMany({ where: { userId: user.userId, roundNumber } });
+      io!.to("admins").emit("exam:status:remove", { userId: user.userId, roundNumber });
+    });
+
+    socket.on("disconnect", () => null);
   });
 
   return io;

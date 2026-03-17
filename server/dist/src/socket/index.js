@@ -1,8 +1,14 @@
 import { Server } from "socket.io";
 import { env } from "../config/env.js";
 import { verifyToken } from "../utils/jwt.js";
+let io = null;
+export function getIO() {
+    if (!io)
+        throw new Error("Socket.io not initialized");
+    return io;
+}
 export function createSocketServer(server) {
-    const io = new Server(server, {
+    io = new Server(server, {
         cors: {
             origin: env.CLIENT_ORIGIN,
             credentials: true,
@@ -30,6 +36,13 @@ export function createSocketServer(server) {
         });
         socket.on("room:leave", (room) => {
             socket.leave(room);
+        });
+        socket.on("auction:code", (data) => {
+            io.to(`auction:${data.auctionProblemId}`).emit("auction:live-code", {
+                userId: user.userId,
+                teamId: data.teamId,
+                code: data.code,
+            });
         });
     });
     return io;

@@ -48,47 +48,62 @@ export async function submitCode(req: Request, res: Response) {
     if (matchupId) {
       const matchup = await prisma.matchup.findUnique({ where: { id: matchupId } });
 
+      if (!matchup) {
+        return res.status(404).json({ message: "Matchup not found." });
+      }
+
+      if (matchup.user1Id !== userId && matchup.user2Id !== userId) {
+        return res.status(403).json({ message: "You are not part of this matchup." });
+      }
+
+      if (matchup.problemId !== problemId) {
+        return res.status(400).json({ message: "Submitted problem does not match matchup problem." });
+      }
+
       if (matchup && matchup.status === MatchupStatus.LIVE && !matchup.winnerId) {
-        // Check if both users have submitted, or if this is an accepted solution
         const opponentId = matchup.user1Id === userId ? matchup.user2Id : matchup.user1Id;
 
-        // Get best submissions from both users for this problem
-        const myBest = await prisma.submission.findFirst({
-          where: { userId, problemId, status: SubmissionStatus.ACCEPTED },
-        });
+        if (judged.accepted) {
+          // Claim victory in a single transaction so winner update and bits award stay consistent.
+          const result = await prisma.$transaction(async (tx) => {
+            const endedAt = new Date();
+            const claim = await tx.matchup.updateMany({
+              where: {
+                id: matchupId,
+                status: MatchupStatus.LIVE,
+                winnerId: null,
+              },
+              data: {
+                winnerId: userId,
+                status: MatchupStatus.COMPLETED,
+                endedAt,
+              },
+            });
 
-        const opponentBest = await prisma.submission.findFirst({
-          where: { userId: opponentId, problemId, status: SubmissionStatus.ACCEPTED },
-        });
+            if (claim.count === 0) {
+              return null;
+            }
 
-        // Determine winner: whoever has an accepted submission first
-        if (myBest && !opponentBest) {
-          // I solved it, opponent hasn't yet - wait for time to expire or opponent to submit
-          // For now, mark as winner immediately on first accepted
-          await prisma.matchup.update({
-            where: { id: matchupId },
-            data: {
-              winnerId: userId,
-              status: MatchupStatus.COMPLETED,
-              endedAt: new Date(),
-            },
+            await tx.user.update({
+              where: { id: opponentId },
+              data: { eliminatedAt: endedAt },
+            });
+
+            await tx.user.update({
+              where: { id: userId },
+              data: { bits: { increment: 100 } },
+            });
+
+            return { winnerId: userId, loserId: opponentId };
           });
 
-          await prisma.user.update({
-            where: { id: opponentId },
-            data: { eliminatedAt: new Date() },
-          });
-
-          await prisma.user.update({
-            where: { id: userId },
-            data: { bits: { increment: 100 } },
-          });
-
-          io.to(`matchup:${matchupId}`).emit("matchup:result", {
-            matchupId,
-            winnerId: userId,
-            loserId: opponentId,
-          });
+          if (result) {
+            io.to(`matchup:${matchupId}`).emit("matchup:result", {
+              matchupId,
+              winnerId: result.winnerId,
+              loserId: result.loserId,
+            });
+          }
         }
       }
 

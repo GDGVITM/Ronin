@@ -1,10 +1,21 @@
 import { useEffect, useState } from "react";
 import { http } from "../api/http";
+import { useExamMode } from "../hooks/useExamMode";
 import type { Problem } from "../types";
 
 export function Round3Page() {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [selected, setSelected] = useState<Problem | null>(null);
+  const {
+    fullscreenLockActive,
+    tabSwitchCount,
+    violationLocked,
+    warningMessage,
+    bannedMessage,
+    clearWarning,
+    warningText,
+    reEnterFullscreen,
+  } = useExamMode("Round 3", 3);
 
   useEffect(() => {
     http.get<Problem[]>("/round/3/problems").then(({ data }) => {
@@ -27,6 +38,38 @@ export function Round3Page() {
 
   return (
     <div className="min-h-[80vh] text-white">
+      {violationLocked && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-6">
+          <p className="text-center text-3xl font-bold text-red-500">{bannedMessage || "You are banned due to multiple tab switches"}</p>
+        </div>
+      )}
+
+      {warningMessage && !violationLocked && (
+        <div className="pointer-events-none fixed right-4 top-20 z-[61] max-w-md">
+          <div className="pointer-events-auto rounded-xl border border-amber-400/40 bg-ghost-panel/95 p-4 shadow-lg backdrop-blur">
+            <p className="text-xs font-semibold text-amber-300">{warningMessage}</p>
+            <button className="mt-2 rounded bg-amber-300 px-3 py-1.5 text-xs font-semibold text-black" onClick={clearWarning}>OK</button>
+          </div>
+        </div>
+      )}
+
+      {fullscreenLockActive && !violationLocked && (
+        <div className="pointer-events-none fixed right-4 top-20 z-[60] max-w-md">
+          <div className="pointer-events-auto rounded-xl border border-ghost-gold/40 bg-ghost-panel/95 p-4 shadow-lg backdrop-blur">
+            <h2 className="text-lg font-bold text-ghost-gold">Exam Mode Required</h2>
+            <p className="mt-2 text-xs text-gray-300">{warningText}</p>
+            <p className="mt-2 text-xs text-ghost-red">Fullscreen was exited. Re-enter fullscreen to continue.</p>
+            <p className="mt-2 text-xs text-ghost-red">Tab switches detected: {tabSwitchCount}</p>
+            <button
+              className="mt-3 rounded bg-ghost-gold px-3 py-1.5 text-xs font-semibold text-black"
+              onClick={() => void reEnterFullscreen()}
+            >
+              Return To Fullscreen
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="border-b border-gray-800 bg-ghost-panel px-6 py-4">
         <h1 className="text-2xl font-bold text-ghost-gold">Round 3 — MVP Building</h1>
         <p className="mt-1 text-sm text-gray-400">

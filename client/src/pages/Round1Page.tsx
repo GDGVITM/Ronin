@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import { http } from "../api/http";
 import { useAuthStore } from "../store/auth.store";
 import { getSocket } from "../socket/client";
+import { useTheme } from "../theme/ThemeProvider";
+import { useExamMode } from "../hooks/useExamMode";
 import type { Matchup, Problem, RunResult, SubmissionResult } from "../types";
 
 const LANGUAGES = [
@@ -15,7 +18,9 @@ const LANGUAGES = [
 const ROUND_DURATION = 15 * 60;
 
 export function Round1Page() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const { theme } = useTheme();
   const [matchup, setMatchup] = useState<Matchup | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [code, setCode] = useState("");
@@ -28,6 +33,18 @@ export function Round1Page() {
   const [opponentStatus, setOpponentStatus] = useState("");
   const [runError, setRunError] = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeMatchupIdRef = useRef<string | null>(null);
+  const isWinner = Boolean(matchResult && matchResult.winnerId === user?.id);
+  const {
+    fullscreenLockActive,
+    tabSwitchCount,
+    violationLocked,
+    warningMessage,
+    bannedMessage,
+    clearWarning,
+    warningText,
+    reEnterFullscreen,
+  } = useExamMode("Round 1", 1, !isWinner);
 
   const fetchMatchup = useCallback(async () => {
     if (!user) return;
@@ -44,24 +61,29 @@ export function Round1Page() {
       const myMatch = liveMatch ?? myMatches[0] ?? null;
 
       if (myMatch) {
-        // Reset all state when matchup changes
-        setMatchup((prev) => {
-          if (prev?.id !== myMatch.id) {
-            setOutput(null);
-            setSubmissionResult(null);
-            setMatchResult(null);
-            setOpponentStatus("");
-            setRunError("");
-          }
-          return myMatch;
-        });
+        const isNewMatchup = activeMatchupIdRef.current !== myMatch.id;
+
+        // Reset volatile state only when matchup actually changes.
+        if (isNewMatchup) {
+          setOutput(null);
+          setSubmissionResult(null);
+          setMatchResult(null);
+          setOpponentStatus("");
+          setRunError("");
+        }
+
+        setMatchup(myMatch);
 
         const { data: problems } = await http.get<Problem[]>("/problem?round=1");
         const p = problems.find((pr) => pr.id === myMatch.problem.id);
         if (p) {
           setProblem(p);
-          setCode(p.starterCode || "");
+          if (isNewMatchup) {
+            setCode(p.starterCode || "");
+          }
         }
+
+        activeMatchupIdRef.current = myMatch.id;
 
         // Calculate timer from latest matchup's startedAt
         if (myMatch.startedAt && myMatch.status === "LIVE") {
@@ -78,6 +100,7 @@ export function Round1Page() {
         }
       } else {
         // No matchup found — reset everything
+        activeMatchupIdRef.current = null;
         setMatchup(null);
         setProblem(null);
         setCode("");
@@ -175,6 +198,20 @@ export function Round1Page() {
     };
   }, [matchup?.id, user]);
 
+  useEffect(() => {
+    if (matchResult?.winnerId !== user?.id) return;
+    const socket = getSocket();
+    socket?.emit("exam:exclude", { roundNumber: 1 });
+  }, [matchResult, user]);
+
+  useEffect(() => {
+    if (!matchResult) return;
+    const timeoutId = setTimeout(() => {
+      navigate("/dashboard");
+    }, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [matchResult, navigate]);
+
   async function handleRun() {
     if (!problem) return;
     setLoading(true);
@@ -231,6 +268,38 @@ export function Round1Page() {
 
   return (
     <div className="flex h-[calc(100vh-49px)] flex-col text-white">
+      {violationLocked && !isWinner && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-6">
+          <p className="text-center text-3xl font-bold text-red-500">{bannedMessage || "You are banned due to multiple tab switches"}</p>
+        </div>
+      )}
+
+      {warningMessage && !violationLocked && !isWinner && (
+        <div className="pointer-events-none fixed right-4 top-20 z-[61] max-w-md">
+          <div className="pointer-events-auto rounded-xl border border-amber-400/40 bg-ghost-panel/95 p-4 shadow-lg backdrop-blur">
+            <p className="text-xs font-semibold text-amber-300">{warningMessage}</p>
+            <button className="mt-2 rounded bg-amber-300 px-3 py-1.5 text-xs font-semibold text-black" onClick={clearWarning}>OK</button>
+          </div>
+        </div>
+      )}
+
+      {fullscreenLockActive && !violationLocked && !isWinner && (
+        <div className="pointer-events-none fixed right-4 top-20 z-[60] max-w-md">
+          <div className="pointer-events-auto rounded-xl border border-ghost-gold/40 bg-ghost-panel/95 p-4 shadow-lg backdrop-blur">
+            <h2 className="text-lg font-bold text-ghost-gold">Exam Mode Required</h2>
+            <p className="mt-2 text-xs text-gray-300">{warningText}</p>
+            <p className="mt-2 text-xs text-ghost-red">Fullscreen was exited. Re-enter fullscreen to continue.</p>
+            <p className="mt-2 text-xs text-ghost-red">Tab switches detected: {tabSwitchCount}</p>
+            <button
+              className="mt-3 rounded bg-ghost-gold px-3 py-1.5 text-xs font-semibold text-black"
+              onClick={() => void reEnterFullscreen()}
+            >
+              Return To Fullscreen
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Win/lose overlay */}
       {matchResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
@@ -306,11 +375,11 @@ export function Round1Page() {
             </select>
             <div className="ml-auto flex gap-2">
               <button className="rounded bg-ghost-gold/80 px-4 py-1.5 text-sm font-semibold text-black hover:bg-ghost-gold disabled:opacity-50"
-                onClick={handleRun} disabled={loading || timeLeft === 0}>
+                onClick={handleRun} disabled={loading || timeLeft === 0 || (!isWinner && (fullscreenLockActive || violationLocked))}>
                 {loading ? "Running..." : "Run"}
               </button>
               <button className="rounded bg-ghost-gold px-4 py-1.5 text-sm font-semibold text-black hover:bg-ghost-gold/90 disabled:opacity-50"
-                onClick={handleSubmit} disabled={loading || timeLeft === 0}>
+                onClick={handleSubmit} disabled={loading || timeLeft === 0 || (!isWinner && (fullscreenLockActive || violationLocked))}>
                 Submit
               </button>
             </div>
@@ -318,8 +387,8 @@ export function Round1Page() {
 
           <div className="flex-1">
             <Editor height="100%" language={language === "c++" ? "cpp" : language} value={code}
-              onChange={(v) => setCode(v ?? "")} theme="vs-dark"
-              options={{ fontSize: 14, minimap: { enabled: false }, scrollBeyondLastLine: false, wordWrap: "on" }}
+              onChange={(v) => setCode(v ?? "")} theme={theme === "light" ? "vs" : "vs-dark"}
+              options={{ fontSize: 14, minimap: { enabled: false }, scrollBeyondLastLine: false, wordWrap: "on", readOnly: !isWinner && (fullscreenLockActive || violationLocked) }}
             />
           </div>
 

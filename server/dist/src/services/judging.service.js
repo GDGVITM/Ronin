@@ -8,21 +8,57 @@ export async function runAgainstProblem(problemId, language, code) {
     if (!problem) {
         throw new Error("Problem not found.");
     }
+    if (problem.testCases.length === 0) {
+        throw new Error("No test cases configured for this problem.");
+    }
     let passed = 0;
+    const details = [];
     for (const testCase of problem.testCases) {
-        const result = await executeCode({
-            language,
-            source: code,
-            stdin: testCase.input,
-        });
-        const output = (result.run.stdout ?? "").trim();
-        if (output === testCase.expected.trim()) {
-            passed += 1;
+        try {
+            const result = await executeCode({
+                language,
+                source: code,
+                stdin: testCase.input,
+            });
+            const stdout = (result.run.stdout ?? "").trim();
+            const stderr = (result.run.stderr ?? "").trim();
+            // If there's a runtime error, the test fails
+            if (result.run.code !== 0 && stderr) {
+                details.push({
+                    input: testCase.input,
+                    expected: testCase.expected.trim(),
+                    got: stderr,
+                    pass: false,
+                    isHidden: testCase.isHidden,
+                });
+                continue;
+            }
+            const pass = stdout === testCase.expected.trim();
+            if (pass)
+                passed += 1;
+            details.push({
+                input: testCase.input,
+                expected: testCase.expected.trim(),
+                got: stdout,
+                pass,
+                isHidden: testCase.isHidden,
+            });
+        }
+        catch (err) {
+            details.push({
+                input: testCase.input,
+                expected: testCase.expected.trim(),
+                got: `Execution error: ${err.message}`,
+                pass: false,
+                isHidden: testCase.isHidden,
+            });
         }
     }
     return {
         passedTests: passed,
         totalTests: problem.testCases.length,
         accepted: passed === problem.testCases.length,
+        // Only show non-hidden test case details
+        details: details.filter((d) => !d.isHidden),
     };
 }

@@ -138,19 +138,33 @@ export function createSocketServer(server: HttpServer) {
           }
         }
 
-        const updated = await prisma.proctoringStatus.upsert({
-          where: { userId_roundNumber: { userId: user.userId, roundNumber } },
-          update: { fullscreen, tabSwitchCount, warned, banned },
-          create: {
-            userId: user.userId,
-            roundNumber,
-            fullscreen,
-            tabSwitchCount,
-            warned,
-            banned,
-          },
-          include: { user: { select: { name: true } } },
-        });
+        let updated;
+        try {
+          updated = await prisma.proctoringStatus.upsert({
+            where: { userId_roundNumber: { userId: user.userId, roundNumber } },
+            update: { fullscreen, tabSwitchCount, warned, banned },
+            create: {
+              userId: user.userId,
+              roundNumber,
+              fullscreen,
+              tabSwitchCount,
+              warned,
+              banned,
+            },
+            include: { user: { select: { name: true } } },
+          });
+        } catch (e: unknown) {
+          // Race condition: another event created the row between findUnique and upsert
+          if ((e as { code?: string })?.code === "P2002") {
+            updated = await prisma.proctoringStatus.update({
+              where: { userId_roundNumber: { userId: user.userId, roundNumber } },
+              data: { fullscreen, tabSwitchCount, warned, banned },
+              include: { user: { select: { name: true } } },
+            });
+          } else {
+            return;
+          }
+        }
 
         const status = toExamStatus(updated);
         io!.to("admins").emit("exam:status:update", status);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { http } from "../api/http";
 import { useAuthStore } from "../store/auth.store";
 import { getSocket } from "../socket/client";
@@ -8,8 +8,25 @@ import { GhostFigure } from "./LandingPage";
 
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
+  const navigate = useNavigate();
   const [eventState, setEventState]   = useState<EventState | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+
+
+
+  const enterRound = async (roundNumber: number) => {
+    try {
+      const el = document.documentElement as HTMLElement & {
+        webkitRequestFullscreen?: () => Promise<void> | void;
+      };
+      if (typeof el.requestFullscreen === "function") {
+        await el.requestFullscreen();
+      } else if (typeof el.webkitRequestFullscreen === "function") {
+        await el.webkitRequestFullscreen();
+      }
+    } catch { /* browser may block on first click — round page handles it */ }
+    navigate(`/round/${roundNumber}`);
+  };
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -108,9 +125,12 @@ export function DashboardPage() {
                 <p className="text-xl font-bold">{roundNames[eventState.currentRound]}</p>
                 <p className="text-sm text-gray-300 mt-1">{roundDescs[eventState.currentRound]}</p>
               </div>
-              <Link to={`/round/${eventState.currentRound}`} className="contest-btn-primary rounded-xl px-7 py-3 text-sm font-bold">
+              <button
+                onClick={() => void enterRound(eventState.currentRound)}
+                className="contest-btn-primary rounded-xl px-7 py-3 text-sm font-bold"
+              >
                 Enter Round →
-              </Link>
+              </button>
             </div>
           </div>
         )}
@@ -127,15 +147,14 @@ export function DashboardPage() {
           </div>
         )}
 
-        {/* Round cards */}
         <div className="grid gap-4 sm:grid-cols-3 mb-6">
           {[1, 2, 3].map((r) => {
             const isLive = eventState?.currentRound === r && eventState.roundStatus === "LIVE";
             return (
-              <Link
+              <button
                 key={r}
-                to={`/round/${r}`}
-                className={`glass-card p-5 group transition-all duration-200 hover:-translate-y-1 hover:border-ghost-gold/25 ${isLive ? "border-ghost-gold/35" : ""}`}
+                onClick={() => void enterRound(r)}
+                className={`glass-card p-5 group transition-all duration-200 hover:-translate-y-1 hover:border-ghost-gold/25 text-left ${isLive ? "border-ghost-gold/35" : ""}`}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-ghost-gold/30 px-2 text-xs font-bold tracking-wide text-ghost-gold">{roundIcons[r]}</span>
@@ -144,7 +163,7 @@ export function DashboardPage() {
                 <p className="text-xs uppercase tracking-widest text-gray-500">Round {r}</p>
                 <p className="text-base font-bold mt-1 text-white group-hover:text-ghost-gold transition-colors">{roundNames[r]}</p>
                 <p className="mt-2 text-xs text-gray-400 leading-relaxed">{roundDescs[r]}</p>
-              </Link>
+              </button>
             );
           })}
         </div>

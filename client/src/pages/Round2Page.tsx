@@ -43,10 +43,9 @@ export function Round2Page() {
   const hasSubmittedRef = useRef(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
+    fullscreenLockActive,
     violationLocked,
-    warningMessage,
-    bannedMessage,
-    clearWarning,
+    reEnterFullscreen,
   } = useExamMode("Round 2", 2);
 
   const fetchLeaderboard = useCallback(async () => {
@@ -296,6 +295,29 @@ export function Round2Page() {
 
   return (
     <div className="flex h-[calc(100vh-49px)] flex-col text-white">
+
+      {/* Fullscreen required overlay */}
+      {fullscreenLockActive && !violationLocked && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/85 backdrop-blur-sm">
+          <div className="glass-card max-w-sm w-full p-10 text-center border border-ghost-gold/40 shadow-[0_0_50px_rgba(212,175,55,0.25)]">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-ghost-gold/10 border border-ghost-gold/30">
+              <svg className="h-8 w-8 text-ghost-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-ghost-gold mb-2">Fullscreen Required</h2>
+            <p className="text-sm text-gray-300 mb-1">You exited fullscreen mode.</p>
+            <p className="text-xs text-gray-500 mb-7">Re-enter fullscreen to continue the quiz.</p>
+            <button
+              className="w-full rounded-xl bg-ghost-gold py-3 text-sm font-bold text-black hover:opacity-90 transition"
+              onClick={() => void reEnterFullscreen()}
+            >
+              Enter Fullscreen
+            </button>
+          </div>
+        </div>
+      )}
+
       {showCorrectPopup && (
         <div className="fixed inset-0 z-[68] flex items-center justify-center bg-black/50 p-6">
           <div className="rounded-xl border border-ghost-green/60 bg-ghost-panel px-10 py-8 text-center shadow-[0_0_32px_rgba(46,204,113,0.35)]">
@@ -312,22 +334,6 @@ export function Round2Page() {
           </div>
         </div>
       )}
-
-      {violationLocked && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-6">
-          <p className="text-center text-3xl font-bold text-red-500">{bannedMessage || "You are banned due to multiple tab switches"}</p>
-        </div>
-      )}
-
-      {warningMessage && !violationLocked && (
-        <div className="pointer-events-none fixed right-4 top-20 z-[61] max-w-md">
-          <div className="pointer-events-auto rounded-xl border border-amber-400/40 bg-ghost-panel/95 p-4 shadow-lg backdrop-blur">
-            <p className="text-xs font-semibold text-amber-300">{warningMessage}</p>
-            <button className="mt-2 rounded bg-amber-300 px-3 py-1.5 text-xs font-semibold text-black" onClick={clearWarning}>OK</button>
-          </div>
-        </div>
-      )}
-
 
 
 

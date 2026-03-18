@@ -37,12 +37,7 @@ export function Round1Page() {
   const isWinner = Boolean(matchResult && matchResult.winnerId === user?.id);
   const {
     fullscreenLockActive,
-    tabSwitchCount,
     violationLocked,
-    warningMessage,
-    bannedMessage,
-    clearWarning,
-    warningText,
     reEnterFullscreen,
   } = useExamMode("Round 1", 1, !isWinner);
 
@@ -268,39 +263,31 @@ export function Round1Page() {
 
   return (
     <div className="flex h-[calc(100vh-49px)] flex-col text-white">
-      {violationLocked && !isWinner && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-6">
-          <p className="text-center text-3xl font-bold text-red-500">{bannedMessage || "You are banned due to multiple tab switches"}</p>
-        </div>
-      )}
 
-      {warningMessage && !violationLocked && !isWinner && (
-        <div className="pointer-events-none fixed right-4 top-20 z-[61] max-w-md">
-          <div className="pointer-events-auto rounded-xl border border-amber-400/40 bg-ghost-panel/95 p-4 shadow-lg backdrop-blur">
-            <p className="text-xs font-semibold text-amber-300">{warningMessage}</p>
-            <button className="mt-2 rounded bg-amber-300 px-3 py-1.5 text-xs font-semibold text-black" onClick={clearWarning}>OK</button>
-          </div>
-        </div>
-      )}
-
-      {fullscreenLockActive && !violationLocked && !isWinner && (
-        <div className="pointer-events-none fixed right-4 top-20 z-[60] max-w-md">
-          <div className="pointer-events-auto rounded-xl border border-ghost-gold/40 bg-ghost-panel/95 p-4 shadow-lg backdrop-blur">
-            <h2 className="text-lg font-bold text-ghost-gold">Exam Mode Required</h2>
-            <p className="mt-2 text-xs text-gray-300">{warningText}</p>
-            <p className="mt-2 text-xs text-ghost-red">Fullscreen was exited. Re-enter fullscreen to continue.</p>
-            <p className="mt-2 text-xs text-ghost-red">Tab switches detected: {tabSwitchCount}</p>
+      {/* Fullscreen required overlay */}
+      {fullscreenLockActive && !isWinner && !violationLocked && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/85 backdrop-blur-sm">
+          <div className="glass-card max-w-sm w-full p-10 text-center border border-ghost-gold/40 shadow-[0_0_50px_rgba(212,175,55,0.25)]">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-ghost-gold/10 border border-ghost-gold/30">
+              <svg className="h-8 w-8 text-ghost-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-ghost-gold mb-2">Fullscreen Required</h2>
+            <p className="text-sm text-gray-300 mb-1">You exited fullscreen mode.</p>
+            <p className="text-xs text-gray-500 mb-7">Re-enter fullscreen to continue the test.</p>
             <button
-              className="mt-3 rounded bg-ghost-gold px-3 py-1.5 text-xs font-semibold text-black"
+              className="w-full rounded-xl bg-ghost-gold py-3 text-sm font-bold text-black hover:opacity-90 transition"
               onClick={() => void reEnterFullscreen()}
             >
-              Return To Fullscreen
+              Enter Fullscreen
             </button>
           </div>
         </div>
       )}
 
       {/* Win/lose overlay */}
+
       {matchResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className={`rounded-lg p-12 text-center ${

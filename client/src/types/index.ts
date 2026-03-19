@@ -17,6 +17,7 @@ export type Problem = {
   description: string;
   difficulty: string;
   roundNumber: number;
+  hint?: string;
   starterCode: string;
   timeLimit: number;
   testCases?: TestCase[];
@@ -39,6 +40,7 @@ export type Matchup = {
   status: MatchupStatus;
   startedAt: string | null;
   endedAt: string | null;
+  timerExtension: number;
 };
 
 export type EventState = {

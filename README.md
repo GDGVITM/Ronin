@@ -1,4 +1,4 @@
-# Way Of Ghost Event Platform
+# Last Standing Ronin Event Platform
 
 Full-stack event platform scaffold for:
 - Round 1 coding duel elimination

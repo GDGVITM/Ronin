@@ -1,5 +1,13 @@
 import axios from "axios";
 import { env } from "../config/env.js";
+function normalizeLanguage(language) {
+    const lang = language.trim().toLowerCase();
+    if (lang === "c++" || lang === "cpp" || lang === "g++")
+        return "c++";
+    if (lang === "gcc")
+        return "c";
+    return lang;
+}
 function normalizeJavaSource(source) {
     const hasMainClass = /\b(?:public\s+)?class\s+Main\b/.test(source);
     if (hasMainClass)
@@ -10,12 +18,13 @@ function normalizeJavaSource(source) {
     return source;
 }
 export async function executeCode({ language, source, stdin = "" }) {
-    const normalizedSource = language === "java" ? normalizeJavaSource(source) : source;
+    const normalizedLanguage = normalizeLanguage(language);
+    const normalizedSource = normalizedLanguage === "java" ? normalizeJavaSource(source) : source;
     const payload = {
-        language,
+        language: normalizedLanguage,
         version: "*",
         files: [
-            language === "java"
+            normalizedLanguage === "java"
                 ? { name: "Main.java", content: normalizedSource }
                 : { content: normalizedSource },
         ],

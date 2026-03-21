@@ -8,7 +8,7 @@ function postPackageInstall(language) {
 
     const req = http.request(
       {
-        hostname: "localhost",
+        hostname: "43.205.140.154",
         port: 2000,
         path: "/api/v2/packages",
         method: "POST",

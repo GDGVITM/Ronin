@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { PrismaClient, Role, UserStatus } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 async function main() {
     // ── Admin user ──
@@ -8,14 +8,14 @@ async function main() {
     const hash = await bcrypt.hash(password, 10);
     await prisma.user.upsert({
         where: { email },
-        update: { password: hash, role: Role.ADMIN, status: UserStatus.APPROVED },
+        update: { password: hash, role: "ADMIN", status: "APPROVED" },
         create: {
             email,
             password: hash,
             name: "Event Admin",
             college: "GDG Spectrum",
-            role: Role.ADMIN,
-            status: UserStatus.APPROVED,
+            role: "ADMIN",
+            status: "APPROVED",
         },
     });
     // ── Event state ──
@@ -52,7 +52,7 @@ Output Format:
             difficulty: "Easy",
             roundNumber: 2,
             hint: "Track currently present IDs using a HashSet. If an exit occurs for an ID not in the set, it's invalid.",
-            starterCode: {
+            starterCode: JSON.stringify({
                 java: `import java.util.*;
 
 public class EventTracker {
@@ -74,7 +74,7 @@ int main() {
     // Your code here
     return 0;
 }`
-            },
+            }),
             timeLimit: 900,
             testCases: {
                 create: [

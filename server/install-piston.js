@@ -8,7 +8,7 @@ function postPackageInstall(language) {
 
     const req = http.request(
       {
-        hostname: "43.205.140.154",
+        hostname: process.env.PISTON_HOST || "localhost",
         port: 2000,
         path: "/api/v2/packages",
         method: "POST",

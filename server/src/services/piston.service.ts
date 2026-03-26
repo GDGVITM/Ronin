@@ -11,6 +11,7 @@ function normalizeLanguage(language: string): string {
   const lang = language.trim().toLowerCase();
   if (lang === "c++" || lang === "cpp" || lang === "g++") return "c++";
   if (lang === "gcc") return "c";
+  if (lang === "js") return "javascript";
   return lang;
 }
 

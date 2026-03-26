@@ -1,6 +1,6 @@
 import http from "node:http";
 
-const langs = ["java", "python", "gcc"];
+const langs = ["java", "python", "gcc", "node"];
 
 function postPackageInstall(language) {
   return new Promise((resolve, reject) => {

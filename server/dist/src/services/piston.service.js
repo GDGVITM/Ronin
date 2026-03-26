@@ -6,6 +6,8 @@ function normalizeLanguage(language) {
         return "c++";
     if (lang === "gcc")
         return "c";
+    if (lang === "js")
+        return "javascript";
     return lang;
 }
 function normalizeJavaSource(source) {

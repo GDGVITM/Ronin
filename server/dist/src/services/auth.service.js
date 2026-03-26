@@ -45,6 +45,7 @@ export async function loginUser(email, password) {
             email: user.email,
             role: user.role,
             status: user.status,
+            bits: user.bits,
         },
     };
 }

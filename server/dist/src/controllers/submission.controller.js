@@ -136,8 +136,8 @@ export async function handleTimeout(req, res) {
             return res.status(400).json({ message: "Matchup not started." });
         }
         const totalSeconds = baseDuration + (matchup.timerExtension || 0);
-        // Add 10 seconds grace period for network latency and sync
-        const expiresAt = new Date(matchup.startedAt.getTime() + (totalSeconds * 1000) + 10000);
+        // Allow up to 5 seconds early to account for frontend timer logic and clock drift
+        const expiresAt = new Date(matchup.startedAt.getTime() + (totalSeconds * 1000) - 5000);
         if (Date.now() < expiresAt.getTime()) {
             return res.status(400).json({ message: "Time is not up yet." });
         }

@@ -53,26 +53,19 @@ Output Format:
             roundNumber: 2,
             hint: "Track currently present IDs using a HashSet. If an exit occurs for an ID not in the set, it's invalid.",
             starterCode: JSON.stringify({
-                java: `import java.util.*;
-
-public class EventTracker {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        // Your code here
-    }
+                java: `import java.util.*; 
+class Main{ 
+public static void main(String[] args){ 
+} 
 }`,
-                python: `def solve():
-    # Your code here
-    pass
-
-if __name__ == '__main__':
-    solve()`,
-                "c++": `#include <iostream>
-using namespace std;
-
-int main() {
-    // Your code here
-    return 0;
+                python: `def main(): 
+    pass 
+if __name__ == "__main__": 
+    main()`,
+                "c++": `#include <iostream> 
+using namespace std; 
+int main(){ 
+return 0; 
 }`
             }),
             timeLimit: 900,
@@ -80,7 +73,7 @@ int main() {
                 create: [
                     { input: "5\n+ 1\n+ 2\n- 1\n+ 3\n- 2", expected: "1", isHidden: false },
                     { input: "4\n+ 10\n+ 20\n- 10\n- 20", expected: "0", isHidden: false },
-                    { input: "3\n+ 1\n- 2\n- 1", expected: "INVALID", isHidden: true },
+                    { input: "6\n+ 5\n+ 6\n- 5\n+ 7\n- 6\n+ 8", expected: "2", isHidden: false },
                 ],
             },
         },
@@ -102,26 +95,19 @@ Output Format:
             roundNumber: 2,
             hint: "Sort tasks by deadline. Iterate and maintain a Max-Heap of durations. Accept tasks if they fit; if not, swap against a longer accepted task to save time.",
             starterCode: {
-                java: `import java.util.*;
-
-public class PortfolioManager {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        // Your code here
-    }
+                java: `import java.util.*; 
+class Main{ 
+public static void main(String[] args){ 
+} 
 }`,
-                python: `def solve():
-    # Your code here
-    pass
-
-if __name__ == '__main__':
-    solve()`,
-                "c++": `#include <iostream>
-using namespace std;
-
-int main() {
-    // Your code here
-    return 0;
+                python: `def main(): 
+    pass 
+if __name__ == "__main__": 
+    main()`,
+                "c++": `#include <iostream> 
+using namespace std; 
+int main(){ 
+return 0; 
 }`
             },
             timeLimit: 900,
@@ -129,7 +115,7 @@ int main() {
                 create: [
                     { input: "3\n2 5\n1 3\n2 7", expected: "3", isHidden: false },
                     { input: "3\n3 3\n2 3\n1 3", expected: "1", isHidden: false },
-                    { input: "4\n2 2\n1 2\n2 3\n1 3", expected: "2", isHidden: true },
+                    { input: "4\n1 2\n2 4\n1 3\n2 5", expected: "3", isHidden: false },
                 ],
             },
         },
@@ -151,26 +137,19 @@ Output Format:
             roundNumber: 2,
             hint: "Use a map to store the 'last successful time' for each user. Only update it if the current message is sent (i.e., time - last time >= K).",
             starterCode: {
-                java: `import java.util.*;
-
-public class SpamFilter {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        // Your code here
-    }
+                java: `import java.util.*; 
+class Main{ 
+public static void main(String[] args){ 
+} 
 }`,
-                python: `def solve():
-    # Your code here
-    pass
-
-if __name__ == '__main__':
-    solve()`,
-                "c++": `#include <iostream>
-using namespace std;
-
-int main() {
-    // Your code here
-    return 0;
+                python: `def main(): 
+    pass 
+if __name__ == "__main__": 
+    main()`,
+                "c++": `#include <iostream> 
+using namespace std; 
+int main(){ 
+return 0; 
 }`
             },
             timeLimit: 900,
@@ -178,7 +157,7 @@ int main() {
                 create: [
                     { input: "5 3\n1 2 4 6 7", expected: "2", isHidden: false },
                     { input: "5 2\n1 3 5 7 9", expected: "0", isHidden: false },
-                    { input: "5 5\n1 2 3 4 5", expected: "4", isHidden: true },
+                    { input: "6 4\n1 2 3 7 8 12", expected: "3", isHidden: false },
                 ],
             },
         },
@@ -198,26 +177,19 @@ Output Format:
             roundNumber: 2,
             hint: "Simulate a sliding window by iterating linearly. If value <= K, extend your window. If > K, reset your window length to 0.",
             starterCode: {
-                java: `import java.util.*;
-
-public class SessionAnalyzer {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        // Your code here
-    }
+                java: `import java.util.*; 
+class Main{ 
+public static void main(String[] args){ 
+} 
 }`,
-                python: `def solve():
-    # Your code here
-    pass
-
-if __name__ == '__main__':
-    solve()`,
-                "c++": `#include <iostream>
-using namespace std;
-
-int main() {
-    // Your code here
-    return 0;
+                python: `def main(): 
+    pass 
+if __name__ == "__main__": 
+    main()`,
+                "c++": `#include <iostream> 
+using namespace std; 
+int main(){ 
+return 0; 
 }`
             },
             timeLimit: 900,
@@ -225,7 +197,7 @@ int main() {
                 create: [
                     { input: "8 5\n2 3 6 1 4 5 7 2", expected: "3", isHidden: false },
                     { input: "5 10\n1 2 3 4 5", expected: "5", isHidden: false },
-                    { input: "6 3\n4 4 4 4 4 4", expected: "0", isHidden: true },
+                    { input: "7 3\n1 2 3 4 1 2 3", expected: "3", isHidden: false },
                 ],
             },
         },
@@ -247,23 +219,39 @@ Output Format:
             starterCode: {
                 java: `import java.util.*;
 
-public class BurstScheduler {
+class Main {
     public static void main(String[] args) {
+
         Scanner sc = new Scanner(System.in);
-        // Your code here
+
+        int n = sc.nextInt();
+
+        // write your code here
+
+
     }
 }`,
-                python: `def solve():
-    # Your code here
-    pass
+                python: `def main():
 
-if __name__ == '__main__':
-    solve()`,
+    n = int(input())
+
+    # write your code here
+
+
+
+if __name__ == "__main__":
+    main()`,
                 "c++": `#include <iostream>
 using namespace std;
 
 int main() {
-    // Your code here
+
+    int n;
+    cin >> n;
+
+    // write your code here
+
+
     return 0;
 }`
             },
@@ -272,7 +260,7 @@ int main() {
                 create: [
                     { input: "4\n4 70\n1 80\n1 30\n2 100", expected: "250", isHidden: false },
                     { input: "3\n1 20\n2 50\n2 10", expected: "70", isHidden: false },
-                    { input: "5\n2 100\n1 19\n2 27\n1 25\n3 15", expected: "142", isHidden: true },
+                    { input: "5\n2 100\n1 19\n2 27\n1 25\n3 15", expected: "142", isHidden: false },
                 ],
             },
         },

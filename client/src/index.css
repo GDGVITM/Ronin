@@ -47,13 +47,8 @@ html, body { margin: 0; padding: 0; overflow-x: hidden; }
 
 body {
   min-height: 100vh;
-  background: var(--parchment);
-  background-image:
-    url('/backg.png'),
-    linear-gradient(160deg, #f5ead4 0%, #ede0c4 50%, #e4d3b0 100%);
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  background: transparent;
+  background-image: none;
   font-family: "Noto Serif JP", "Inter", serif;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -104,7 +99,35 @@ body {
 /* ─── App Shell ──────────────────────────────────────────────────────── */
 .app-shell {
   background: var(--parchment);
+  background-image:
+    url('/backg.png'),
+    linear-gradient(160deg, #f5ead4 0%, #ede0c4 50%, #e4d3b0 100%);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   position: relative;
+}
+
+/* ─── Round Shell (black bg for coding pages) ────────────────────────── */
+.round-shell {
+  background: #000 !important;
+  background-image: none !important;
+  position: relative;
+  isolation: isolate;
+}
+
+/* When data-round is set, force black on body and html */
+html[data-round="true"],
+html[data-round="true"] body {
+  background: #000 !important;
+  background-image: none !important;
+  background-color: #000 !important;
+  background-attachment: initial !important;
+}
+html[data-round="true"]:fullscreen,
+html[data-round="true"]:fullscreen body {
+  background: #000 !important;
+  background-image: none !important;
 }
 
 /* ─── Glass card (reusable) — parchment style ────────────────────────── */
@@ -153,8 +176,10 @@ body {
 
 /* ─── LANDING BACKGROUND ─────────────────────────────────────────────── */
 .contest-bg {
-  background:
-    linear-gradient(180deg, rgba(240,228,200,0.50) 0%, rgba(232,215,180,0.40) 100%);
+  background-image: url('/backg.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 108% 108%;
   position: relative;
 }
 

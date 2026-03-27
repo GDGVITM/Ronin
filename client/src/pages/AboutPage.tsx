@@ -75,9 +75,9 @@ const rounds = [
     jpName: "影の戦術",
     subtitle: "1v1 Coding Duel",
     icon: <IconSword />,
-    accent: "#b08d43",
-    accentBg: "rgba(201,163,78,0.08)",
-    accentBorder: "rgba(201,163,78,0.28)",
+    accent: "#8B0000",
+    accentBg: "rgba(139,0,0,0.07)",
+    accentBorder: "rgba(139,0,0,0.22)",
     desc: "Face your opponent head-to-head in a live coding duel. Both contestants receive the same algorithmic problem — solve it faster and more accurately to advance. Topics span greedy algorithms, dynamic programming, graphs, and data structures. Every second counts in this brutal elimination round.",
     rules: [
       "Both opponents get the same DSA problem simultaneously",
@@ -186,43 +186,43 @@ export function AboutPage() {
         {/* ── Roadmap ── */}
         <section className="mb-10">
           <div style={{ textAlign: "center", marginBottom: "32px" }}>
-            <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", letterSpacing: "0.20em", textTransform: "uppercase", color: "#8B0000", marginBottom: "6px" }}>
+            <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", letterSpacing: "0.20em", textTransform: "uppercase", color: "#5f0000", marginBottom: "6px", fontWeight: 800 }}>
               Event Roadmap
             </h2>
-            <p style={{ fontFamily: "'Yuji Boku', serif", fontSize: "13px", color: "rgba(26,26,26,0.80)" }}>
+            <p style={{ fontFamily: "'Yuji Boku', serif", fontSize: "13px", color: "rgba(26,26,26,0.96)", fontWeight: 700 }}>
               三つの試煉
             </p>
-            <div style={{ width: "60px", height: "2px", background: "#8B0000", borderRadius: "2px", opacity: 0.55, margin: "10px auto 0" }} />
+            <div style={{ width: "60px", height: "2px", background: "#6f0000", borderRadius: "2px", opacity: 0.8, margin: "10px auto 0" }} />
           </div>
 
           {/* Desktop timeline */}
           <div className="hidden md:grid grid-cols-3 gap-0 relative">
-            <div style={{ position: "absolute", top: "32px", left: "16.67%", right: "16.67%", height: "1px", background: "linear-gradient(90deg, rgba(139,0,0,0.20), rgba(201,163,78,0.30), rgba(139,0,0,0.20))" }} />
+            <div style={{ position: "absolute", top: "32px", left: "16.67%", right: "16.67%", height: "1px", background: "linear-gradient(90deg, rgba(95,0,0,0.34), rgba(176,141,67,0.44), rgba(95,0,0,0.34))" }} />
             {rounds.map((r) => (
               <div key={r.number} className="flex flex-col items-center text-center px-6">
                 <div className="relative flex flex-col items-center mb-4">
                   <div
                     className="w-16 h-16 rounded-full flex items-center justify-center border-2 mb-3 relative z-10"
-                    style={{ background: r.accentBg, borderColor: r.accentBorder, color: r.accent }}
+                    style={{ background: r.accentBg, borderColor: r.accentBorder, color: r.accent, boxShadow: "0 4px 18px rgba(95,0,0,0.10)" }}
                   >
                     {r.icon}
                   </div>
-                  <span style={{ fontSize: "10px", fontFamily: "'Cinzel', serif", fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(26,26,26,0.70)" }}>
+                  <span style={{ fontSize: "10px", fontFamily: "'Cinzel', serif", fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(26,26,26,0.92)" }}>
                     Round {r.number}
                   </span>
                 </div>
-                <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "15px", fontWeight: 800, color: "#1A1A1A", marginBottom: "3px" }}>
+                <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "15px", fontWeight: 800, color: "#111111", marginBottom: "3px" }}>
                   {r.name}
                 </h3>
-                <p style={{ fontFamily: "'Yuji Boku', serif", fontSize: "13px", color: r.accent, marginBottom: "2px", fontWeight: 600 }}>{r.jpName}</p>
-                <p style={{ fontSize: "12px", color: "rgba(26,26,26,0.85)", fontWeight: 500 }}>{r.subtitle}</p>
+                <p style={{ fontFamily: "'Yuji Boku', serif", fontSize: "13px", color: r.accent, marginBottom: "2px", fontWeight: 700 }}>{r.jpName}</p>
+                <p style={{ fontSize: "12px", color: "rgba(26,26,26,0.96)", fontWeight: 600 }}>{r.subtitle}</p>
               </div>
             ))}
           </div>
 
           {/* Mobile timeline */}
           <div className="md:hidden flex flex-col gap-0 pl-8 relative">
-            <div style={{ position: "absolute", left: "28px", top: "16px", bottom: "16px", width: "1px", background: "rgba(201,163,78,0.25)" }} />
+            <div style={{ position: "absolute", left: "28px", top: "16px", bottom: "16px", width: "1px", background: "rgba(95,0,0,0.30)" }} />
             {rounds.map((r) => (
               <div key={r.number} className="relative flex items-start gap-5 pb-8 last:pb-0">
                 <div
@@ -232,11 +232,11 @@ export function AboutPage() {
                   {r.icon}
                 </div>
                 <div>
-                  <p style={{ fontSize: "10px", fontFamily: "'Cinzel', serif", fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(26,26,26,0.70)", marginBottom: "2px" }}>
+                  <p style={{ fontSize: "10px", fontFamily: "'Cinzel', serif", fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(26,26,26,0.92)", marginBottom: "2px" }}>
                     Round {r.number}
                   </p>
-                  <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>{r.name}</h3>
-                  <p style={{ fontSize: "12px", color: r.accent, fontWeight: 600 }}>{r.subtitle}</p>
+                  <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", fontWeight: 800, color: "#111111" }}>{r.name}</h3>
+                  <p style={{ fontSize: "12px", color: r.accent, fontWeight: 700 }}>{r.subtitle}</p>
                 </div>
               </div>
             ))}
@@ -382,3 +382,4 @@ export function AboutPage() {
     </div>
   );
 }
+

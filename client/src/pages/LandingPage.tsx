@@ -37,7 +37,7 @@ export function RoninFigure({
 }
 
 /* ─── GDG Brand Logo ────────────────────────────────────────────────── */
-export function GdgLogo() {
+export function GdgLogo({ dark = false }: { dark?: boolean }) {
   return (
     <div className="flex items-center gap-2.5 flex-shrink-0">
       <svg width="52" height="30" viewBox="0 0 56 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
@@ -47,10 +47,10 @@ export function GdgLogo() {
         <path d="M35 26.5L49.5 16" stroke="#fbbc04" strokeWidth="8.5" strokeLinecap="round" />
       </svg>
       <div className="flex flex-col items-start leading-[1.15] ml-0.5 pt-[1px]">
-        <span style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "0.01em", color: "#1A1A1A", fontFamily: "'Cinzel', serif" }}>
+        <span style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "0.01em", color: dark ? "#f5eaca" : "#1A1A1A", fontFamily: "'Cinzel', serif", textShadow: dark ? "0 1px 10px rgba(0,0,0,0.45)" : "none" }}>
           Google Developer Groups
         </span>
-        <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.04em", color: "rgba(26,26,26,0.55)" }}>
+        <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.04em", color: dark ? "rgba(245,234,202,0.72)" : "rgba(26,26,26,0.55)" }}>
           VIT Mumbai
         </span>
       </div>
@@ -427,7 +427,12 @@ export function LandingPage() {
   const showLogin = location.pathname === "/login";
   const showRegister = location.pathname === "/register";
 
-  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setMenuOpen(false);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [location.pathname]);
 
   const socialItems = [
     { label: "Instagram",   icon: <IconInstagram />, href: "https://www.instagram.com/gdg_vit/" },

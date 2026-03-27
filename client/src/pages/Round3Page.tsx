@@ -47,7 +47,7 @@ export function Round3Page() {
 
   if (!accessChecked) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center text-white">
+      <div className="flex min-h-[calc(100vh-49px)] items-center justify-center text-white bg-black">
         <p className="text-gray-400 text-sm">Verifying access…</p>
       </div>
     );
@@ -56,7 +56,7 @@ export function Round3Page() {
 
   if (problems.length === 0) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center text-white">
+      <div className="flex min-h-[calc(100vh-49px)] items-center justify-center text-white bg-black">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-ghost-gold">Round 3 — Khan's Ultimatum</h1>
           <p className="mt-4 text-gray-400">MVP Building Round</p>
@@ -67,7 +67,7 @@ export function Round3Page() {
   }
 
   return (
-    <div className="min-h-[80vh] text-white">
+    <div className="min-h-[calc(100vh-49px)] text-white bg-black pt-2 pb-6">
       {violationLocked && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-6">
           <p className="text-center text-3xl font-bold text-red-500">{bannedMessage || "You are banned due to multiple tab switches"}</p>

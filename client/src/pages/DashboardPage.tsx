@@ -4,7 +4,6 @@ import { http } from "../api/http";
 import { useAuthStore } from "../store/auth.store";
 import { getSocket } from "../socket/client";
 import type { EventState, LeaderboardEntry } from "../types";
-import { RoninFigure } from "./LandingPage";
 
 /* ─── Small helpers ───────────────────────────────────────────────────── */
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -115,10 +114,17 @@ export function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div style={{ width: "42px", height: "42px", position: "relative", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: "0px", left: "-9px" }}>
-                <RoninFigure scale={0.7} />
-              </div>
+            <div
+              className="flex items-center justify-center overflow-hidden"
+              style={{ width: "108px", height: "52px" }}
+            >
+              <img
+                src="/logo_app.png"
+                alt="Last Standing Ronin logo"
+                width={128}
+                height={60}
+                style={{ width: "128px", height: "60px", objectFit: "contain", transform: "scale(1.08)", filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.18))" }}
+              />
             </div>
             <div
               style={{
@@ -206,9 +212,13 @@ export function DashboardPage() {
         {(!eventState || eventState.roundStatus !== "LIVE") && (
           <div className="p-6 text-center mb-6" style={cardStyle}>
             <div className="flex justify-center mb-3" style={{ height: "60px" }}>
-              <div style={{ position: "relative", top: "-10px" }}>
-                <RoninFigure scale={0.55} />
-              </div>
+              <img
+                src="/logo_app.png"
+                alt="Last Standing Ronin logo"
+                width={120}
+                height={58}
+                style={{ width: "120px", height: "58px", objectFit: "contain", filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.18))" }}
+              />
             </div>
             <p style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "rgba(26,26,26,0.50)", marginBottom: "4px" }}>
               No round is currently active.
@@ -298,6 +308,13 @@ export function DashboardPage() {
                 <p style={{ fontSize: "13px", color: "rgba(26,26,26,0.85)", lineHeight: 1.6, fontFamily: "'Noto Serif JP', serif" }}>
                   {roundDescs[r]}
                 </p>
+                {!isLocked && (
+                  <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid rgba(139,0,0,0.15)", textAlign: "right" }}>
+                    <span className="contest-btn-primary" style={{ borderRadius: "8px", padding: "6px 16px", fontSize: "11px", fontWeight: 700 }}>
+                      Enter Round →
+                    </span>
+                  </div>
+                )}
               </button>
             );
           })}

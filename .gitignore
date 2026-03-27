@@ -34,6 +34,9 @@ server/.env
 .tmp/
 tmp/
 coverage/
+_temp_*
+frontend_backups/
+.revert-ronin/
 
 # Prisma local artifacts (keep migrations tracked)
 server/prisma/dev.db

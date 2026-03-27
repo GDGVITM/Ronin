@@ -6,6 +6,7 @@ import { useAuthStore } from "../store/auth.store";
 import { getSocket } from "../socket/client";
 import { useTheme } from "../theme/ThemeProvider";
 import { useExamMode } from "../hooks/useExamMode";
+import { RoundBackground } from "../components/RoundBackground";
 import type { Matchup, Problem, RunResult, SubmissionResult } from "../types";
 
 const ROUND_DURATION = 15 * 60;
@@ -324,7 +325,8 @@ export function Round1Page() {
 
   if (!matchup || !problem) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center text-white">
+      <><RoundBackground />
+      <div className="flex min-h-[calc(100vh-49px)] items-center justify-center text-white bg-black">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-ghost-gold">
             Round 1 — Debug Arena
@@ -337,11 +339,13 @@ export function Round1Page() {
           </p>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-49px)] flex-col text-white">
+    <><RoundBackground />
+    <div className="flex h-[calc(100vh-49px)] flex-col text-white bg-black">
       {/* Fullscreen required overlay */}
       {fullscreenLockActive && !isWinner && !violationLocked && (
         <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/85 backdrop-blur-sm">
@@ -609,5 +613,6 @@ export function Round1Page() {
         </div>
       </div>
     </div>
+    </>
   );
 }

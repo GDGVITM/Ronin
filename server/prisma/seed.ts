@@ -1,7 +1,43 @@
 import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
+import dotenv from "dotenv";
 
-const prisma = new PrismaClient();
+dotenv.config();
+
+function normalizeSupabasePoolerUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const isPoolerHost = parsed.hostname.endsWith("pooler.supabase.com");
+    const usesWrongPort = parsed.port === "5432";
+
+    if (isPoolerHost && usesWrongPort) {
+      parsed.port = "6543";
+      return parsed.toString();
+    }
+  } catch {
+    // Keep original value if URL parsing fails.
+  }
+
+  return url;
+}
+
+const rawDatabaseUrl = process.env.DATABASE_URL;
+if (!rawDatabaseUrl) {
+  throw new Error("DATABASE_URL is missing. Add it to server/.env before running prisma:seed.");
+}
+
+const databaseUrl = normalizeSupabasePoolerUrl(rawDatabaseUrl);
+if (databaseUrl !== rawDatabaseUrl) {
+  console.warn("[seed] Supabase pooler URL detected on port 5432. Using port 6543.");
+}
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: databaseUrl,
+    },
+  },
+});
 
 async function main() {
   // ── Admin user ──
@@ -122,7 +158,7 @@ return 0;
       testCases: {
         create: [
           { input: "3\n2 5\n1 3\n2 7", expected: "3", isHidden: false },
-          { input: "3\n3 3\n2 3\n1 3", expected: "1", isHidden: false },
+          { input: "3\n3 3\n2 3\n2 3", expected: "1", isHidden: false },
           { input: "4\n1 2\n2 4\n1 3\n2 5", expected: "3", isHidden: false },
         ],
       },
@@ -333,8 +369,6 @@ class Manager extends Employee {
     }
 }
 
-public class Company {
-
     public static void main(String args[]) {
         java.util.Scanner sc = new java.util.Scanner(System.in);
         String n1 = sc.next();
@@ -351,8 +385,7 @@ public class Company {
 
         m1.displayInfo();
 
-    }
-}`,
+    }`,
         python: `class Employee:
     def __init__(self, name, salary):
         name = name  
@@ -903,6 +936,10 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (error) => {
+    if (error instanceof Error && error.message.includes("P1001")) {
+      console.error("[seed] Could not reach Supabase/Postgres.");
+      console.error("[seed] Check DATABASE_URL host, password, and port (Supabase pooler usually uses 6543).");
+    }
     console.error(error);
     await prisma.$disconnect();
     process.exit(1);

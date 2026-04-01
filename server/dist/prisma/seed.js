@@ -7,8 +7,14 @@ function normalizeSupabasePoolerUrl(url) {
         const parsed = new URL(url);
         const isPoolerHost = parsed.hostname.endsWith("pooler.supabase.com");
         const usesWrongPort = parsed.port === "5432";
-        if (isPoolerHost && usesWrongPort) {
-            parsed.port = "6543";
+        if (isPoolerHost) {
+            if (usesWrongPort) {
+                parsed.port = "6543";
+            }
+            // Supabase pooler runs through PgBouncer; this avoids prepared statement conflicts.
+            if (!parsed.searchParams.has("pgbouncer")) {
+                parsed.searchParams.set("pgbouncer", "true");
+            }
             return parsed.toString();
         }
     }
@@ -97,7 +103,12 @@ if __name__ == "__main__":
 using namespace std; 
 int main(){ 
 return 0; 
-}`
+    }`,
+                javascript: `function main() {
+
+    }
+
+    main();`
             }),
             timeLimit: 900,
             testCases: {
@@ -139,7 +150,12 @@ if __name__ == "__main__":
 using namespace std; 
 int main(){ 
 return 0; 
-}`
+    }`,
+                javascript: `function main() {
+
+    }
+
+    main();`
             },
             timeLimit: 900,
             testCases: {
@@ -181,7 +197,12 @@ if __name__ == "__main__":
 using namespace std; 
 int main(){ 
 return 0; 
-}`
+    }`,
+                javascript: `function main() {
+
+    }
+
+    main();`
             },
             timeLimit: 900,
             testCases: {
@@ -221,7 +242,12 @@ if __name__ == "__main__":
 using namespace std; 
 int main(){ 
 return 0; 
-}`
+    }`,
+                javascript: `function main() {
+
+    }
+
+    main();`
             },
             timeLimit: 900,
             testCases: {
@@ -284,7 +310,12 @@ int main() {
 
 
     return 0;
-}`
+}`,
+                javascript: `function main() {
+
+}
+
+main();`
             },
             timeLimit: 900,
             testCases: {
@@ -462,7 +493,53 @@ int main() {
     m1.displayInfo();
 
     return 0;
-}`
+}`,
+                javascript: `class Employee {
+  constructor(name, salary) {
+    name = name;
+    salary = salary;
+  }
+
+  displayInfo() {
+    console.log("Employee Name: " + name);
+    console.log("Salary: " + salary);
+  }
+
+  calculateSalary() {
+    return salary;
+  }
+}
+
+class Manager extends Employee {
+  constructor(name, salary, bonus) {
+    this.bonus = bonus;
+  }
+
+  calculateSalary() {
+    return salary + bonus;
+  }
+
+  displayinfo() {
+    console.log("Manager Name: " + this.name);
+    console.log("Total Salary: " + this.calculateSalary());
+  }
+}
+
+const fs = require("fs");
+const input = fs.readFileSync(0, "utf8").trim().split(/\s+/);
+let idx = 0;
+
+const n1 = input[idx++];
+const s1 = Number(input[idx++]);
+const n2 = input[idx++];
+const s2 = Number(input[idx++]);
+const b2 = Number(input[idx++]);
+
+const e1 = new Employee(n1, s1);
+const m1 = new Manager(n2, s2, b2);
+
+e1.displayInfo();
+m1.displayInfo();`
             },
             timeLimit: 900,
             testCases: {
@@ -664,7 +741,46 @@ int main() {
 
     cout << "Remaining Balance: " << c.getBalance() << endl;
     return 0;
-}`
+}`,
+                javascript: `class User {
+  constructor(name) {
+    name = name;
+  }
+
+  displayUser() {}
+}
+
+class Customer extends User {
+  constructor(name, balance) {
+    super(name);
+    this.walletBalance = balance;
+  }
+
+  pay(amount) {
+    if (this.walletBalance < amount) {
+      this.walletBalance = this.walletBalance - amount;
+      console.log("Payment Successful");
+    } else {
+      console.log("Insufficient Balance");
+    }
+  }
+
+  displayUser() {
+    console.log("Customer: " + this.name);
+  }
+}
+
+const fs = require("fs");
+const input = fs.readFileSync(0, "utf8").trim().split(/\s+/);
+
+const name = input[0];
+const bal = Number(input[1]);
+const amt = Number(input[2]);
+
+const c = new Customer(name, bal);
+c.displayUser();
+c.pay(amt);
+console.log("Remaining Balance: " + c.walletBalance);`
             },
             timeLimit: 900,
             testCases: {
@@ -830,7 +946,42 @@ int main() {
     cout << "Total books issued: " << Library::totalIssued << endl;
 
     return 0;
-}`
+}`,
+                javascript: `class Library {
+  static totalIssued = 0;
+
+  constructor(name) {
+    this.bookName = name;
+    this.issuedBooks = 0;
+  }
+
+  issueBook(quantity = 1) {
+    issuedBooks = issuedBooks + quantity;
+    totalIssued = totalIssued + quantity;
+  }
+
+  getIssuedBooks() {
+    return issuedBooks;
+  }
+}
+
+const fs = require("fs");
+const input = fs.readFileSync(0, "utf8").trim().split(/\s+/);
+
+const n1 = input[0];
+const n2 = input[1];
+const q1 = Number(input[2]);
+const q2 = Number(input[3]);
+
+const l1 = new Library(n1);
+const l2 = new Library(n2);
+
+l1.issueBook();
+l1.issueBook(q1);
+l2.issueBook(q2);
+
+console.log("Books issued from l1: " + l1.getIssuedBooks());
+console.log("Total books issued: " + Library.totalIssued);`
             },
             timeLimit: 900,
             testCases: {

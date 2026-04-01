@@ -145,7 +145,7 @@ return 0;
             testCases: {
                 create: [
                     { input: "3\n2 5\n1 3\n2 7", expected: "3", isHidden: false },
-                    { input: "3\n3 3\n2 3\n1 3", expected: "1", isHidden: false },
+                    { input: "3\n3 3\n2 3\n2 3", expected: "1", isHidden: false },
                     { input: "4\n1 2\n2 4\n1 3\n2 5", expected: "3", isHidden: false },
                 ],
             },

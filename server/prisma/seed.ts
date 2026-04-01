@@ -1034,20 +1034,55 @@ Total books issued: 31`,
 
   // ── Round 3: MVP Problem Statements ──
 
+  await prisma.problem.deleteMany({ where: { roundNumber: 3 } });
+
   await prisma.problem.create({
     data: {
-      title: "Student Attendance Dashboard",
-      description: `Build a web-based Student Attendance Dashboard MVP.
+      title: "Smart Mission Planner",
+      description: `Problem Statement:
+You are building Smart Mission Planner, a productivity-first planning app that helps users turn ambitious goals into practical, executable action plans.
 
-Requirements:
-- A simple UI where a teacher can mark attendance for students
-- Display a list of students with Present/Absent toggle
-- Show attendance summary (total present, total absent, percentage)
-- Data can be stored in-memory or localStorage (no backend required)
+Objective:
+Break complex tasks into smaller, manageable steps.
 
-Tech: Use any framework/library. Focus on clean UI and working functionality.
-Time: You have the full round duration to build this on VS Code.`,
-      difficulty: "Medium",
+Detailed Explanation:
+Users should be able to enter one large mission (for example: "Prepare for internship interviews in 30 days") and the system should intelligently split it into structured subtasks.
+Each subtask should include:
+- A clear title
+- Priority level (High / Medium / Low)
+- Recommended or user-editable deadline
+- Completion status
+
+The app should help users avoid overwhelm by making large goals feel achievable through progressive execution.
+
+Key Features:
+1) Task Breakdown
+- Convert one major goal into multiple subtasks.
+- Allow users to add, edit, merge, or delete generated subtasks.
+
+2) Priority Assignment
+- Assign priority labels to each subtask.
+- Support sorting/filtering by priority.
+
+3) Deadline Tracking
+- Set deadlines for each subtask.
+- Show upcoming and overdue items clearly.
+
+4) Progress Monitoring
+- Track completion status per subtask.
+- Display mission progress with percentage and visual indicator.
+
+Expected MVP Scope:
+- Functional interface for creating one or more missions.
+- Auto-generated or template-based subtask suggestions.
+- Priority and deadline management for all subtasks.
+- Basic progress dashboard for mission completion.
+
+Evaluation Focus:
+- Clarity of task decomposition
+- Usability and workflow simplicity
+- Quality of progress visibility`,
+      difficulty: "Hard",
       roundNumber: 3,
       timeLimit: 2700,
     },
@@ -1055,19 +1090,95 @@ Time: You have the full round duration to build this on VS Code.`,
 
   await prisma.problem.create({
     data: {
-      title: "Event Registration Portal",
-      description: `Build a web-based Event Registration Portal MVP.
+      title: "Focus Arena: Distraction Killer",
+      description: `Problem Statement:
+Build Focus Arena, an application designed to improve concentration by reducing digital distractions and building consistent focus habits.
 
-Requirements:
-- Landing page with event details
-- Registration form (name, email, phone, college)
-- Display registered participants in a table/list
-- Basic form validation
-- Data can be stored in-memory or localStorage
+Objective:
+Improve user focus.
 
-Tech: Use any framework/library. Focus on clean UI and working functionality.
-Time: You have the full round duration to build this on VS Code.`,
-      difficulty: "Medium",
+Detailed Explanation:
+Modern students lose productivity due to constant interruptions from social media and random browsing.
+This app should help users stay on task by combining distraction blocking, structured focus sessions (Pomodoro), and measurable productivity analytics.
+
+Key Features:
+1) Distraction Blocking
+- Allow users to define a custom blocklist (e.g., social media domains/apps).
+- Prevent or discourage access during active focus sessions.
+- Show clear feedback when a distraction is blocked.
+
+2) Focus Timer
+- Provide Pomodoro-style timers (e.g., 25-minute focus, 5-minute break).
+- Support start, pause, resume, and reset controls.
+- Show session state and remaining time in real-time.
+
+3) Productivity Tracking
+- Record number of sessions completed, total focus time, and interruptions.
+- Maintain daily and weekly productivity snapshots.
+
+4) Reports
+- Generate simple visual reports (charts/cards/tables).
+- Highlight trends such as most productive hours and consistency streaks.
+
+Expected MVP Scope:
+- Blocklist management + active session blocker behavior.
+- Fully working Pomodoro timer flow.
+- Local productivity data collection.
+- Basic reporting dashboard.
+
+Evaluation Focus:
+- Effectiveness of the focus workflow
+- Reliability of timer and tracking logic
+- Usefulness and readability of productivity reports`,
+      difficulty: "Hard",
+      roundNumber: 3,
+      timeLimit: 2700,
+    },
+  });
+
+  await prisma.problem.create({
+    data: {
+      title: "Skill Swap Marketplace",
+      description: `Problem Statement:
+Create Skill Swap Marketplace, a student-to-student platform where users exchange skills instead of money.
+
+Objective:
+Enable skill exchange among students.
+
+Detailed Explanation:
+Students often have valuable skills to teach (coding, design, communication, math, video editing, etc.) while seeking help in other areas.
+This platform should let users publish what they can teach and what they want to learn, then help them discover compatible peers for reciprocal exchange.
+
+Key Features:
+1) Skill Listing
+- User can create profile entries for:
+  - Skills they can teach
+  - Skills they want to learn
+- Support categories/tags for easier discovery.
+
+2) Matching System
+- Suggest matches based on teach/learn complementarity.
+- Provide a shortlist of high-fit exchange partners.
+
+3) Ratings and Reviews
+- After a session, users can rate each other.
+- Show review summaries to build trust and quality.
+
+4) User Profiles
+- Public profile with bio, skill tags, availability, and ratings.
+- Include basic identity details needed for collaboration.
+
+Expected MVP Scope:
+- User onboarding/profile creation.
+- Add/edit/remove teach and learn skills.
+- Basic matching logic and match feed.
+- Simple rating/review mechanism.
+
+Evaluation Focus:
+- Match quality and practical usability
+- Profile clarity and trust-building features
+- End-to-end experience from listing to exchange`,
+      difficulty: "Hard",
       roundNumber: 3,
       timeLimit: 2700,
     },
